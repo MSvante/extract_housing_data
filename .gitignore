@@ -176,8 +176,9 @@ logs/
 *.sqlite3
 *.duckdb
 
-# Data files (uncomment if you want to exclude data files)
-# data/
+# Data files and directories
+data/
+logs/
 # *.csv
 # *.json
 # *.xml

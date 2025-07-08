@@ -108,7 +108,10 @@ else:
     filtered_listings = listings_scored      
 
 # Apply all filters
-filtered_listings = filtered_listings[filtered_listings['zip_code'].isin(selected_zip_codes)]
+# Only filter by zip codes if some are selected
+if selected_zip_codes:
+    filtered_listings = filtered_listings[filtered_listings['zip_code'].isin(selected_zip_codes)]
+
 filtered_listings = filtered_listings[filtered_listings['price'] <= max_budget]
 filtered_listings = filtered_listings[filtered_listings['rooms'] >= min_rooms]
 filtered_listings = filtered_listings[filtered_listings['m2'] >= min_m2]
@@ -133,17 +136,15 @@ if show_city_in_zip:
 filtered_listings = filtered_listings.sort_values(by='total_score', ascending=False)
 
 # Display results
-if selected_zip_codes:  
-    st.write(f"**Fandt {len(filtered_listings)} boliger der matcher dine kriterier**")
+st.write(f"**Fandt {len(filtered_listings)} boliger der matcher dine kriterier**")
+
+# Create tabs for different views
+data_tab, scores_tab, seen_tab = st.tabs(["🏠 Boliger", "📊 Pointdetaljer", "🔍 Allerede sete huse"])
+with data_tab:
+    st.info("💡 **Vigtigt**: Pris-scoren baseres på **pris per m²**, ikke samlet pris. Dette betyder at et stort hus med lav m²-pris kan score højere end et lille hus med høj m²-pris.")
     
-    # Create tabs for different views
-    data_tab, scores_tab, seen_tab = st.tabs(["🏠 Boliger", "📊 Pointdetaljer", "🔍 Allerede sete huse"])
-    
-    with data_tab:
-        st.info("💡 **Vigtigt**: Pris-scoren baseres på **pris per m²**, ikke samlet pris. Dette betyder at et stort hus med lav m²-pris kan score højere end et lille hus med høj m²-pris.")
-        
-        # Main property information
-        if not filtered_listings.empty:
+    # Main property information
+    if not filtered_listings.empty:
             property_columns = ['full_address', 'price', 'm2_price', 'm2', 'rooms', 'built', 
                               'energy_class', 'lot_size', 'basement_size', 'days_on_market', 'total_score']
             
@@ -186,62 +187,60 @@ if selected_zip_codes:
                         st.error(f"Fejl ved tilføjelse: {e}")
                 else:
                     st.error("Indtast venligst gyldige ouID'er")
-        else:
-            st.warning("Ingen boliger matcher dine filterkriterier.")
-    
-    with scores_tab:
-        if not filtered_listings.empty:
-            # Score breakdown details
-            score_columns = ['full_address', 'score_price_efficiency', 'score_house_size', 
-                           'score_build_year', 'score_energy', 'score_lot_size', 
-                           'score_basement', 'score_days_market', 'total_score', 'score_train_distance']
-            
-            st.dataframe(
-                data=filtered_listings[score_columns], 
-                height=600, 
-                use_container_width=True, 
-                hide_index=True,
-                column_config={
-                    "score_price_efficiency": st.column_config.NumberColumn("Pris/m²", format="%.1f"),
-                    "score_house_size": st.column_config.NumberColumn("Størrelse", format="%.1f"),
-                    "score_build_year": st.column_config.NumberColumn("År", format="%.1f"),
-                    "score_energy": st.column_config.NumberColumn("Energi", format="%.1f"),
-                    "score_lot_size": st.column_config.NumberColumn("Grund", format="%.1f"),
-                    "score_basement": st.column_config.NumberColumn("Kælder", format="%.1f"),
-                    "score_days_market": st.column_config.NumberColumn("Marked", format="%.1f"),
-                    "total_score": st.column_config.NumberColumn("Samlet", format="%.1f"),
-                    "score_train_distance": st.column_config.NumberColumn("Tog", format="%.1f"),
-                    "full_address": st.column_config.TextColumn("Adresse", width="medium")
-                }
-            )
-        else:
-            st.warning("Ingen boliger matcher dine filterkriterier.")
-    
-    with seen_tab:
-        # Seen Houses section
-        st.subheader("🔍 Sete Huse")
+    else:
+        st.warning("Ingen boliger matcher dine filterkriterier.")
+
+with scores_tab:
+    if not filtered_listings.empty:
+        # Score breakdown details
+        score_columns = ['full_address', 'score_price_efficiency', 'score_house_size', 
+                       'score_build_year', 'score_energy', 'score_lot_size', 
+                       'score_basement', 'score_days_market', 'total_score', 'score_train_distance']
         
-        if not seen_houses.empty:
-            # Join seen houses with listings for addresses
-            seen_with_addresses = seen_houses.merge(
-                listings_scored[['ouId', 'full_address']], 
-                on='ouId', 
-                how='left'
-            )
-            st.dataframe(
-                data=seen_with_addresses[['full_address', 'seen_at']], 
-                height=400, 
-                use_container_width=True, 
-                hide_index=True,
-                column_config={
-                    "full_address": st.column_config.TextColumn("Adresse"),
-                    "seen_at": st.column_config.DatetimeColumn("Set dato")
-                }
-            )
-        else:
-            st.info("Ingen huse er markeret som sete endnu.")
-else:
-    st.write("Vælg venligst mindst ét postnummer.")
+        st.dataframe(
+            data=filtered_listings[score_columns], 
+            height=600, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "score_price_efficiency": st.column_config.NumberColumn("Pris/m²", format="%.1f"),
+                "score_house_size": st.column_config.NumberColumn("Størrelse", format="%.1f"),
+                "score_build_year": st.column_config.NumberColumn("År", format="%.1f"),
+                "score_energy": st.column_config.NumberColumn("Energi", format="%.1f"),
+                "score_lot_size": st.column_config.NumberColumn("Grund", format="%.1f"),
+                "score_basement": st.column_config.NumberColumn("Kælder", format="%.1f"),
+                "score_days_market": st.column_config.NumberColumn("Marked", format="%.1f"),
+                "total_score": st.column_config.NumberColumn("Samlet", format="%.1f"),
+                "score_train_distance": st.column_config.NumberColumn("Tog", format="%.1f"),
+                "full_address": st.column_config.TextColumn("Adresse", width="medium")
+            }
+        )
+    else:
+        st.warning("Ingen boliger matcher dine filterkriterier.")
+
+with seen_tab:
+    # Seen Houses section
+    st.subheader("🔍 Sete Huse")
+    
+    if not seen_houses.empty:
+        # Join seen houses with listings for addresses
+        seen_with_addresses = seen_houses.merge(
+            listings_scored[['ouId', 'full_address']], 
+            on='ouId', 
+            how='left'
+        )
+        st.dataframe(
+            data=seen_with_addresses[['full_address', 'seen_at']], 
+            height=400, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "full_address": st.column_config.TextColumn("Adresse"),
+                "seen_at": st.column_config.DatetimeColumn("Set dato")
+            }
+        )
+    else:
+        st.info("Ingen huse er markeret som sete endnu.")
 
 # Add refresh data button
 if st.sidebar.button("🔄 Genindlæs data"):

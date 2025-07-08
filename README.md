@@ -1,4 +1,4 @@
-# Housing Data Extract - Hus-søgningssystem
+# Hus-søgningssystem - Aarhus området
 
 Dette projekt hjælper med at finde det perfekte hus i Aarhus-området. Systemet scraper boligdata fra boliga.dk, beregner en score baseret på vores præferencer, og præsenterer resultaterne gennem en interaktiv webapp.
 
@@ -10,57 +10,57 @@ Dette projekt hjælper med at finde det perfekte hus i Aarhus-området. Systemet
 - **Notifikationer**: Advarsler ved interessante nye boliger
 - **Platform**: Lokal kørsel med DuckDB og Pandas
 
-## 🏗️ Arkitektur (Lokal)
+## 🚀 Hurtig Start (Automatisk Opsætning)
 
-### Data Pipeline
-1. **Extract** (`src/extract_listings_local.py`): Scraper boliga.dk for postnumre omkring Aarhus
-2. **Transform** (`src/transform_listings_local.py`): Beregner score baseret på byggeår, pris, størrelse, værelser og dage på markedet
-3. **App** (`app/app_local.py`): Streamlit webapp til browsing og marking af sete huse
-4. **Database** (`src/database_local.py`): DuckDB database management
-5. **Scheduler** (`scripts/scheduler.py`): Automated daily pipeline execution
-6. **Pipeline Runner** (`pipeline/run_pipeline.py`): Main pipeline orchestration
+`start.py` scriptet inkluderer nu automatisk miljø-opsætning! Kør blot:
 
-### Teknologi Stack
-- **Database**: DuckDB (let og hurtig lokal database)
-- **Processing**: Pandas (dataframe processing)
-- **Scheduling**: APScheduler (Python scheduling)
-- **Frontend**: Streamlit (lokal webapp)
-- **Environment**: Python virtual environment
-
-## 🚀 Quick Start
-
-### Kort opsætning:
 ```bash
-# Clone repository
-git clone <repo-url>
-cd housing_data_extract
-
-# Setup virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-pip install -r requirements.txt
-
-# Kør pipeline og start webapp (anbefalet første gang)
-python start.py full
-
-# Eller kør kun pipeline
-python start.py pipeline
-
-# Eller start kun webapp
-python start.py app
-
-# Eller start automated scheduler
-python start.py scheduler
+python3 start.py full
 ```
 
-Se [`LOCAL_SETUP.md`](LOCAL_SETUP.md) for detaljeret setup guide.
+Dette vil automatisk:
+- Tjekke Python version (3.8+ påkrævet)
+- Oprette et virtuelt miljø hvis intet eksisterer
+- Installere alle dependencies fra requirements.txt
+- Oprette nødvendige mapper (data, logs)
+- Køre pipeline og starte web appen
 
-## 📊 Forbedret scoring algoritme (OPDATERET!)
+## 📋 Forudsætninger
 
-Hver bolig scores nu på **8 parametre** med equal weighting (max 80 point):
+- Python 3.8+
+- Internetforbindelse til scraping af boliga.dk
+
+## 🛠️ Manuel Installation (hvis nødvendigt)
+
+Hvis du foretrækker manuel opsætning eller oplever problemer med automatisk opsætning:
+
+1. **Klon/naviger til projekt-mappen:**
+   ```bash
+   cd /home/mser/code/repos/housing_data_extract
+   ```
+
+2. **Opret virtuelt miljø:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # På Windows: venv\Scripts\activate
+   ```
+
+3. **Installer dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Opret nødvendige mapper:**
+   ```bash
+   mkdir -p data logs
+   ```
+
+## 📊 Scoring Algoritme (Detaljeret)
+
+Hver bolig scores nu på **8 parametre** med lige vægtning (max 80 point):
 
 **Globale faktorer (samme for alle huse):**
-- **Energiklasse** (10 point max): A=10, B=8, C=6, D=4, E=2, F/G=0, UNKNOWN=3
+- **Energiklasse** (10 point max): A=10, B=8, C=6, D=4, E=2, F/G=0, UKENDT=3
 - **Afstand til tog** (10 point max): Beregnet via GPS koordinater til S-tog og letbane
 
 **Relative faktorer (sammenlignet inden for samme postnummer):**
@@ -72,11 +72,6 @@ Hver bolig scores nu på **8 parametre** med equal weighting (max 80 point):
 - **Dage på marked** (10 point max): Færre dage = højere score relativt til området
 
 **Total max score**: 80 point
-
-**Energimærke håndtering**: 
-- Boliga.dk har mærkelige værdier som G,H,I,J,K,L der faktisk er A-klasse
-- '-' eller manglende værdier bliver til UNKNOWN (3 point)
-- Alle værdier normaliseres til store bogstaver
 
 ## 🚀 Status opdatering
 
@@ -132,13 +127,12 @@ Hver bolig scores nu på **8 parametre** med equal weighting (max 80 point):
 5. **Implementer automatisk scheduling** på produktionsserver
 6. **Performance optimering** og memory usage forbedringer
 
-## 📁 Projekt struktur
+## 📁 Projekt Struktur
 
 ```
 housing_data_extract/
-├── start.py                      # 🎯 MAIN STARTUP SCRIPT
-├── README.md                     # Dette dokument
-├── LOCAL_SETUP.md               # Detaljeret setup guide
+├── start.py                      # 🎯 HOVED STARTUP SCRIPT
+├── README.md                     # Dette dokument  
 ├── requirements.txt             # Python dependencies
 │
 ├── app/                         # 🖥️ Streamlit webapp
@@ -147,31 +141,32 @@ housing_data_extract/
 │
 ├── pipeline/                    # ⚙️ Data pipeline
 │   ├── __init__.py
-│   └── run_pipeline.py         # Pipeline orchestration
+│   └── run_pipeline.py         # Pipeline orkestrering
 │
-├── scripts/                     # 📜 Automation scripts
+├── scripts/                     # 📜 Automatiserings-scripts
 │   ├── __init__.py
-│   └── scheduler.py            # Automated scheduling
+│   └── scheduler.py            # Automatiseret scheduling
 │
-├── src/                        # 🔧 Core modules
+├── src/                        # 🔧 Core moduler
 │   ├── __init__.py
 │   ├── extract_listings_local.py   # Data extraction
 │   ├── transform_listings_local.py # Data transformation & scoring
 │   └── database_local.py           # DuckDB management
 │
-├── data/                       # 💾 Generated data
-│   └── housing.duckdb         # Local database (auto-generated)
+├── data/                       # 💾 Genererede data (ignoreret af git)
+│   └── housing.duckdb         # Lokal database (auto-genereret)
 │
-├── logs/                       # 📝 Application logs (auto-generated)
-├── docs/                       # 📚 Technical documentation
-└── venv/                       # 🐍 Python virtual environment
+├── logs/                       # 📝 Applikations logs (ignoreret af git)
+├── docs/                       # 📚 Teknisk dokumentation
+└── venv/                       # 🐍 Python virtuelt miljø
 ```
 
 ### 🎯 Hovedkommandoer:
-- **`python start.py full`** - Kør pipeline + start webapp (anbefalet første gang)
-- **`python start.py pipeline`** - Kør kun data pipeline
-- **`python start.py app`** - Start kun webapp
-- **`python start.py scheduler`** - Start automated scheduler
+- **`python3 start.py full`** - Kør pipeline + start webapp (anbefalet første gang)
+- **`python3 start.py pipeline`** - Kør kun data pipeline
+- **`python3 start.py app`** - Start kun webapp
+- **`python3 start.py scheduler`** - Start automatiseret scheduler
+- **`python3 start.py setup`** - Kun opsætning af miljø
 
 ## 📚 Teknisk Dokumentation
 
@@ -179,7 +174,157 @@ housing_data_extract/
 - [`docs/boliga-api-documentation.md`](docs/boliga-api-documentation.md): Komplet dokumentation af boliga.dk's API struktur
 - [`docs/enhanced-scoring-algorithm.md`](docs/enhanced-scoring-algorithm.md): Detaljeret dokumentation af den forbedrede scoring algoritme
 
-## 📍 Målområder (postnumre)
+## 🏃‍♂️ Kørsel af Systemet
 
-Nuværende fokus på 41 postnumre omkring Aarhus med togforbindelse:
-8000-8382, 8400-8471, 8520-8550, 8600, 8660, 8680, 8850-8900
+### 🎯 Integreret Startup Script (ANBEFALET)
+Brug `start.py` scriptet til alle operationer med automatisk miljø-opsætning:
+
+**Første gang eller frisk opsætning - automatisk opsætning + kør pipeline + start webapp:**
+```bash
+python3 start.py full
+```
+
+**Kun opsætning af miljøet (virtuelt miljø + dependencies):**
+```bash
+python3 start.py setup
+```
+
+**Kør kun data pipeline (med auto-opsætning):**
+```bash
+python3 start.py pipeline
+```
+
+**Start kun webapp (med auto-opsætning):**
+```bash
+python3 start.py app
+```
+
+**Start automatiseret scheduler (med auto-opsætning):**
+```bash
+python3 start.py scheduler
+```
+
+**Spring automatisk opsætning over og brug system Python:**
+```bash
+python3 start.py pipeline --skip-setup
+```
+
+### 📖 Detaljerede Kommandoer
+
+#### 1. Manuel Pipeline Kørsel
+Udtræk og proces boligdata én gang:
+```bash
+python start.py pipeline
+# ELLER direkte:
+python pipeline/run_pipeline.py
+```
+
+#### 2. Kør Web Appen
+Start Streamlit appen til at browse boligdata:
+```bash
+python start.py app
+# ELLER direkte:
+streamlit run app/app_local.py
+```
+Appen vil være tilgængelig på http://localhost:8501
+
+#### 3. Planlagte Automatiske Kørsler
+Opsæt automatisk dataindsamling:
+
+**Kør automatiseret scheduler:**
+```bash
+python start.py scheduler
+# ELLER direkte:
+python scripts/scheduler.py
+```
+
+**Start scheduleren (kører dagligt kl. 6 + hver 4. time i aktive timer):**
+```bash
+python scheduler.py
+```
+
+## 🏗️ Arkitektur og Filstruktur
+
+### Data Pipeline
+1. **Extract** (`src/extract_listings_local.py`): Scraper boliga.dk for postnumre omkring Aarhus
+2. **Transform** (`src/transform_listings_local.py`): Beregner score baseret på byggeår, pris, størrelse, værelser og dage på markedet
+3. **App** (`app/app_local.py`): Streamlit webapp til browsing og marking af sete huse
+4. **Database** (`src/database_local.py`): DuckDB database management
+5. **Scheduler** (`scripts/scheduler.py`): Automated daily pipeline execution
+6. **Pipeline Runner** (`pipeline/run_pipeline.py`): Main pipeline orchestration
+
+### Teknologi Stack
+- **Database**: DuckDB (let og hurtig lokal database)
+- **Processing**: Pandas (dataframe processing)
+- **Scheduling**: APScheduler (Python scheduling)
+- **Frontend**: Streamlit (lokal webapp)
+- **Environment**: Python virtual environment
+
+### Arkitektur Migration
+
+**Fra Databricks:**
+- ✅ Databricks Delta Lake → DuckDB
+- ✅ PySpark DataFrame → Pandas DataFrame  
+- ✅ Databricks SQL → DuckDB SQL
+- ✅ Databricks Apps → Lokal Streamlit
+- ✅ Databricks Jobs → APScheduler
+
+**Fordele ved Lokal Opsætning:**
+- Ingen cloud-omkostninger
+- Fuld datakontrol
+- Hurtigere udviklings-iteration
+- Ingen internet-afhængighed for app-brug
+- Simpel backup og gendannelse
+
+## 💾 Database
+
+Systemet bruger DuckDB, en hurtig analytisk database der gemmer data i en enkelt fil:
+- **Lokation:** `data/housing.duckdb`
+- **Tabeller:**
+  - `listings`: Rå scraped data
+  - `listings_scored`: Processerede data med scores
+  - `seen_houses`: Bruger-markerede huse
+
+## 📊 Forbedret Scoring Algoritme
+
+Den forbedrede 8-faktor scoring system (max 80 point):
+
+1. **Energiklasse** (0-10 point): A=10, B=8, C=6, D=4, E=2, F=0, Ukendt=3
+2. **Tog Afstand** (0-10 point): GPS afstand til nærmeste tog/letbane
+3. **Grundstørrelse** (0-10 point): Relativt til andre huse i samme postnummer
+4. **Husstørrelse** (0-10 point): Relativt til andre huse i samme postnummer  
+5. **Pris Effektivitet** (0-10 point): Pris/m² relativt til samme postnummer
+6. **Byggeår** (0-10 point): Relativt til andre huse i samme postnummer
+7. **Kælderstørrelse** (0-10 point): Relativt til andre huse i samme postnummer
+8. **Dage på Marked** (0-10 point): Relativt til andre huse i samme postnummer
+
+## 📊 Monitering
+
+Tjek logs for systemets sundhed:
+```bash
+# Pipeline logs
+tail -f logs/housing_pipeline.log
+
+# Scheduler logs  
+tail -f logs/scheduler.log
+```
+
+## 🛠️ Fejlfinding
+
+**Ingen data i appen:**
+1. Kør pipeline manuelt: `python start.py pipeline`
+2. Tjek logs for fejl
+3. Verificer internetforbindelse
+
+**Database problemer:**
+1. Slet `data/housing.duckdb` for at nulstille
+2. Kør pipeline igen for at genopbygge data
+
+**Streamlit fejl:**
+1. Genstart appen: `Ctrl+C` derefter `python start.py app`
+2. Tjek om pipeline er kørt succesfuldt
+
+**Energimærke håndtering**: 
+- Boliga.dk har mærkelige værdier som G,H,I,J,K,L der faktisk er A-klasse
+- '-' eller manglende værdier bliver til UKENDT (3 point)
+- Alle værdier normaliseres til store bogstaver
