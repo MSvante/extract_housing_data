@@ -1,50 +1,83 @@
 # Local Housing Data Extract Setup
 
+## Quick Start (Automatic Setup)
+
+The `start.py` script now includes automatic environment setup! Simply run:
+
+```bash
+python3 start.py full
+```
+
+This will automatically:
+- Check Python version (3.8+ required)
+- Create a virtual environment if none exists
+- Install all dependencies from requirements.txt
+- Create necessary directories (data, logs)
+- Run the pipeline and start the web app
+
 ## Prerequisites
 
 - Python 3.8+
 - Internet connection for scraping boliga.dk
 
-## Installation
+## Manual Installation (if needed)
+
+If you prefer manual setup or encounter issues with automatic setup:
 
 1. **Clone/navigate to the project directory:**
    ```bash
    cd /home/mser/code/repos/housing_data_extract
    ```
 
-2. **Install dependencies:**
+2. **Create virtual environment:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Create necessary directories:**
+4. **Create necessary directories:**
    ```bash
    mkdir -p data logs
    ```
 
 ## Running the System
 
-### 🎯 Unified Startup Script (ANBEFALET)
-Brug det nye `start.py` script til alle operationer:
+### 🎯 Unified Startup Script (RECOMMENDED)
+Use the `start.py` script for all operations with automatic environment setup:
 
-**Første gang - kør pipeline og start webapp:**
+**First time or fresh setup - automatic setup + run pipeline + start webapp:**
 ```bash
-python start.py full
+python3 start.py full
 ```
 
-**Kør kun data pipeline:**
+**Just setup the environment (virtual env + dependencies):**
 ```bash
-python start.py pipeline
+python3 start.py setup
 ```
 
-**Start kun webapp:**
+**Run only data pipeline (with auto-setup):**
 ```bash
-python start.py app
+python3 start.py pipeline
 ```
 
-**Start automated scheduler:**
+**Start only webapp (with auto-setup):**
 ```bash
-python start.py scheduler
+python3 start.py app
+```
+
+**Start automated scheduler (with auto-setup):**
+```bash
+python3 start.py scheduler
+```
+
+**Skip automatic setup and use system Python:**
+```bash
+python3 start.py pipeline --skip-setup
 ```
 
 ### 📖 Detaljerede kommandoer

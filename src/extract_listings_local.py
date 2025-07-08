@@ -16,17 +16,8 @@ import pandas as pd
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Constants - Limited to 5 zip codes for debugging
+# Constants - Comprehensive Aarhus area zip codes
 ZIPCODES_DICT = {
-    8000: "Århus C", 
-    8370: "Hadsten", 
-    8382: "Hinnerup",
-    8270: "Højbjerg",
-    8250: "Egå"
-}
-
-# Full list for production use:
-ZIPCODES_DICT_FULL = {
     8000: "Århus C", 8200: "Århus N", 8210: "Århus V", 8220: "Brabrand",
     8230: "Åbyhøj", 8240: "Risskov", 8250: "Egå", 8260: "Viby J",
     8270: "Højbjerg", 8300: "Odder", 8310: "Tranbjerg J", 8320: "Mårslet",
