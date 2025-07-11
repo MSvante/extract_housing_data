@@ -17,7 +17,7 @@ Dette projekt hjælper med at finde det perfekte hus i Aarhus-området. Systemet
 ```bash
 python3 start.py full
 ```
-
+r
 Dette vil automatisk:
 - Tjekke Python version (3.8+ påkrævet)
 - Oprette et virtuelt miljø hvis intet eksisterer
