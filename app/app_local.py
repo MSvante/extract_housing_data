@@ -78,14 +78,14 @@ selected_zip_codes = st.sidebar.multiselect("Vælg postnumre", zip_codes, defaul
 
 # Enhanced filters
 st.sidebar.subheader("📊 Basis Filtre")
-max_budget = st.sidebar.number_input("Maksimalt budget", min_value=0, max_value=15000000, value=4000000, step=100000)
+max_budget = st.sidebar.number_input("Maksimalt budget", min_value=0, max_value=15000000, value=4000000, step=500000)
 min_rooms = st.sidebar.number_input("Minimum antal værelser", min_value=0, max_value=15, value=5)
 min_m2 = st.sidebar.number_input("Minimum m²", min_value=0, max_value=1000, value=150)
-min_score = st.sidebar.number_input("Minimum samlet score", min_value=0, max_value=80, value=0, step=1)
+min_score = st.sidebar.number_input("Minimum samlet score", min_value=0, max_value=80, value=40, step=1)
 
 # New enhanced filters
 st.sidebar.subheader("🏗️ Boligdetaljer")
-min_build_year = st.sidebar.number_input("Minimum byggeår", min_value=1900, max_value=2025, value=1960)
+min_build_year = st.sidebar.number_input("Minimum byggeår", min_value=1800, max_value=2025, value=1960)
 energy_classes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'UNKNOWN']
 selected_energy_classes = st.sidebar.multiselect("Energiklasser", energy_classes, default=['A', 'B', 'C', 'D'])
 

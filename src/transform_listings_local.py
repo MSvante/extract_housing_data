@@ -40,16 +40,16 @@ MAX_DISTANCE_KM = 25.0
 
 # Zip codes dictionary for validation - Comprehensive Aarhus area zip codes
 ZIPCODES_DICT = {
-    8000: "Århus C", 8200: "Århus N", 8210: "Århus V", 8220: "Brabrand",
-    8230: "Åbyhøj", 8240: "Risskov", 8250: "Egå", 8260: "Viby J",
-    8270: "Højbjerg", 8300: "Odder", 8310: "Tranbjerg J", 8320: "Mårslet",
+    8000: "Aarhus C", 8200: "AArhus N", 8210: "AArhus V", 8220: "Brabrand",
+    8230: "AAbyhoej", 8240: "Risskov", 8250: "Egaa", 8260: "Viby J",
+    8270: "Hoejbjerg", 8300: "Odder", 8310: "Tranbjerg J", 8320: "Maarslet",
     8330: "Beder", 8340: "Malling", 8350: "Hundslund", 8355: "Solbjerg",
-    8361: "Hasselager", 8362: "Hørning", 8370: "Hadsten", 8380: "Trige",
-    8381: "Tilst", 8382: "Hinnerup", 8400: "Ebeltoft", 8410: "Rønde",
+    8361: "Hasselager", 8362: "Hoerning", 8370: "Hadsten", 8380: "Trige",
+    8381: "Tilst", 8382: "Hinnerup", 8400: "Ebeltoft", 8410: "Roende",
     8420: "Knebel", 8444: "Balle", 8450: "Hammel", 8462: "Harlev J",
-    8464: "Galten", 8471: "Sabro", 8520: "Lystrup", 8530: "Hjortshøj",
-    8541: "Skødstrup", 8543: "Hornslet", 8550: "Ryomgård", 8600: "Silkeborg",
-    8660: "Skanderborg", 8680: "Ry", 8850: "Bjerringbro", 8870: "Langå",
+    8464: "Galten", 8471: "Sabro", 8520: "Lystrup", 8530: "Hjortshoej",
+    8541: "Skoedstrup", 8543: "Hornslet", 8550: "Ryomgaard", 8600: "Silkeborg",
+    8660: "Skanderborg", 8680: "Ry", 8850: "Bjerringbro", 8870: "Langaa",
     8900: "Randers"
 }
 
