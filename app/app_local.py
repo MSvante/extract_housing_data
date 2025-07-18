@@ -87,7 +87,7 @@ min_score = st.sidebar.number_input("Minimum samlet score", min_value=0, max_val
 st.sidebar.subheader("🏗️ Boligdetaljer")
 min_build_year = st.sidebar.number_input("Minimum byggeår", min_value=1800, max_value=2025, value=1960)
 energy_classes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'UNKNOWN']
-selected_energy_classes = st.sidebar.multiselect("Energiklasser", energy_classes, default=['A', 'B', 'C', 'D'])
+selected_energy_classes = st.sidebar.multiselect("Energiklasser", energy_classes, default=[])
 
 min_lot_size = st.sidebar.number_input("Minimum grundstørrelse (m²)", min_value=0, max_value=5000, value=0)
 min_basement_size = st.sidebar.number_input("Minimum kælderstørrelse (m²)", min_value=0, max_value=500, value=0)
@@ -121,10 +121,17 @@ filtered_listings = filtered_listings[filtered_listings['total_score'] >= min_sc
 filtered_listings = filtered_listings[filtered_listings['built'].astype(float) >= min_build_year]
 
 # Energy class filter (handle missing values)
-if 'UNKNOWN' not in selected_energy_classes:
-    energy_filter = (filtered_listings['energy_class'].isin(selected_energy_classes)) | \
-                   (filtered_listings['energy_class'].isna() & ('UNKNOWN' in selected_energy_classes))
+# Only apply energy class filter if some energy classes are selected
+if selected_energy_classes:
+    if 'UNKNOWN' in selected_energy_classes:
+        # Include rows where energy_class is in selected classes OR is missing/null
+        energy_filter = (filtered_listings['energy_class'].isin(selected_energy_classes)) | \
+                       (filtered_listings['energy_class'].isna())
+    else:
+        # Only include rows where energy_class is in selected classes (exclude missing/null)
+        energy_filter = filtered_listings['energy_class'].isin(selected_energy_classes)
     filtered_listings = filtered_listings[energy_filter]
+# If no energy classes are selected, show all properties (no filter applied)
 
 filtered_listings = filtered_listings[filtered_listings['lot_size'].fillna(0) >= min_lot_size]
 filtered_listings = filtered_listings[filtered_listings['basement_size'].fillna(0) >= min_basement_size]
