@@ -59,7 +59,6 @@ class HousingDataDB:
                 address_text VARCHAR,
                 house_number INTEGER,
                 city VARCHAR,
-                full_address VARCHAR,
                 price DOUBLE,
                 m2 INTEGER,
                 m2_price INTEGER,
@@ -85,8 +84,7 @@ class HousingDataDB:
                 score_price_efficiency DOUBLE,
                 score_build_year DOUBLE,
                 score_basement DOUBLE,
-                score_days_market DOUBLE,
-                total_score DOUBLE
+                score_days_market DOUBLE
             )
         """)
         

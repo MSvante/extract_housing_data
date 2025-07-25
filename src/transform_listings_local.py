@@ -130,18 +130,15 @@ def transform_listings(df: pd.DataFrame) -> pd.DataFrame:
     """Transform listings with enhanced scoring algorithm."""
     logging.info("Starting data transformation...")
     
-    # Create full address
-    df['full_address'] = df['address_text'] + ' ' + df['house_number'].astype(str) + ' ' + df['city']
-    
     # Check if city matches zip code
     zip_df = pd.DataFrame(list(ZIPCODES_DICT.items()), columns=['zip_code_filter', 'zip_code_city_filter'])
     zip_df['zip_code_filter'] = zip_df['zip_code_filter'].astype(str)  # Convert to string to match df
     df = df.merge(zip_df, left_on='zip_code', right_on='zip_code_filter', how='left')
     df['is_in_zip_code_city'] = (df['city'] == df['zip_code_city_filter'])
     
-    # Select and cast columns
+    # Select and cast columns (full_address removed - will be created in front-end)
     df = df[[
-        'address_text', 'house_number', 'city', 'full_address', 'price', 'm2', 'm2_price',
+        'address_text', 'house_number', 'city', 'price', 'm2', 'm2_price',
         'rooms', 'built', 'zip_code', 'days_on_market', 'is_in_zip_code_city',
         'latitude', 'longitude', 'energy_class', 'lot_size', 'price_change_percent',
         'is_foreclosure', 'basement_size', 'open_house', 'image_urls', 'ouId'
@@ -196,18 +193,8 @@ def transform_listings(df: pd.DataFrame) -> pd.DataFrame:
             # Days on market score (fewer days is better)
             df.loc[zip_mask, 'score_days_market'] = calculate_zip_relative_score(df, zip_code, 'days_on_market', ascending=True)
     
-    # Calculate total score
-    logging.info("Calculating total scores...")
-    df['total_score'] = (
-        df['score_energy'] + 
-        df['score_train_distance'] + 
-        df['score_lot_size'] + 
-        df['score_house_size'] + 
-        df['score_price_efficiency'] + 
-        df['score_build_year'] + 
-        df['score_basement'] + 
-        df['score_days_market']
-    ).round(2)
+    # Individual score components are now calculated (total_score moved to front-end)
+    logging.info("Individual score calculation complete. Total score will be calculated in front-end.")
     
     # Clean up temporary columns if they exist
     cols_to_drop = ['price_per_m2']

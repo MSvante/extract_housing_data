@@ -11,6 +11,7 @@ import streamlit as st
 sys.path.append(str(Path(__file__).parent.parent / 'src'))
 
 from database_local import HousingDataDB
+from dynamic_scoring import scoring_engine
 
 st.set_page_config(layout="wide", page_title="🏠 Boligoversigt - Lokal Version")
 
@@ -57,18 +58,112 @@ if listings_scored.empty:
 # Main app content
 st.title("🏠 Boligoversigt - Lokal Version")
 
-# Display scoring information
-with st.expander("ℹ️ Information om scoring systemet"):
-    st.write("**Scoring Algoritme - Samlet score (Max: 80 point)**")
-    st.write("Hvert hus får en score baseret på 8 forskellige faktorer. Hver faktor gives en score fra 0-10 point, som tilsammen giver en maksimal score på 80 point.")
-    st.write("• **Energiklasse**: Bedre energiklasse = højere score (A=10, B=8, C=6, osv.)")
-    st.write("• **Togstation afstand**: Jo tættere på togstation, jo højere score")
-    st.write("• **Grundstørrelse**: Større grund = højere score sammenlignet med andre i samme område")
-    st.write("• **Husstørrelse**: Større hus = højere score sammenlignet med andre i samme område")
-    st.write("• **Pris effektivitet**: Lavere **pris per m²** = højere score sammenlignet med andre i samme område")
-    st.write("• **Byggeår**: Nyere hus = højere score sammenlignet med andre i samme område")
-    st.write("• **Kælderstørrelse**: Større kælder = højere score sammenlignet med andre i samme område")
-    st.write("• **Dage på markedet**: Færre dage til salg = højere score sammenlignet med andre i samme område")
+# Initialize session state for weights early
+if 'current_weights' not in st.session_state:
+    st.session_state.current_weights = scoring_engine.DEFAULT_WEIGHTS.copy()
+if 'selected_profile' not in st.session_state:
+    st.session_state.selected_profile = 'Standard (lige vægt)'
+if 'weights_changed' not in st.session_state:
+    st.session_state.weights_changed = False
+
+# ======== VÆGTNINGS SEKTION (Ekspanderbar på hovedsiden) ========
+with st.expander("⚖️ **Scoring Vægtning**", expanded=False):
+    # Create columns for better layout
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        # Profile selector
+        profile_names = scoring_engine.get_profile_names()
+        selected_profile = st.selectbox(
+            "📋 Vælg profil:",
+            profile_names,
+            index=profile_names.index(st.session_state.selected_profile),
+            key="main_profile_selector"
+        )
+
+        # Check if profile changed
+        if selected_profile != st.session_state.selected_profile:
+            st.session_state.selected_profile = selected_profile
+            st.session_state.current_weights = scoring_engine.get_profile_weights(selected_profile)
+            st.session_state.weights_changed = True
+
+        st.write(f"**Aktiv profil:** {selected_profile}")
+        
+        # Show current weights summary
+        st.write("**Aktuelle vægte:**")
+        for param, display_name in scoring_engine.SCORE_PARAMETERS.items():
+            weight = st.session_state.current_weights[param]
+            st.write(f"• {display_name}: {weight:.1f}%")
+    
+    with col2:
+        # Weight sliders
+        st.write("**Juster vægtning (%):**")
+        temp_weights = {}
+        total_weight = 0
+
+        # Create two columns for sliders
+        slider_col1, slider_col2 = st.columns(2)
+        params_list = list(scoring_engine.SCORE_PARAMETERS.items())
+        mid_point = len(params_list) // 2
+        
+        with slider_col1:
+            for param, display_name in params_list[:mid_point]:
+                current_value = st.session_state.current_weights[param]
+                new_value = st.slider(
+                    f"{display_name}:",
+                    min_value=0.0,
+                    max_value=50.0,
+                    value=current_value,
+                    step=0.5,
+                    key=f"main_weight_{param}"
+                )
+                temp_weights[param] = new_value
+                total_weight += new_value
+        
+        with slider_col2:
+            for param, display_name in params_list[mid_point:]:
+                current_value = st.session_state.current_weights[param]
+                new_value = st.slider(
+                    f"{display_name}:",
+                    min_value=0.0,
+                    max_value=50.0,
+                    value=current_value,
+                    step=0.5,
+                    key=f"main_weight_{param}"
+                )
+                temp_weights[param] = new_value
+                total_weight += new_value
+
+        # Show total weight with color coding
+        if abs(total_weight - 100.0) < 0.1:
+            st.success(f"✅ Total vægtning: {total_weight:.1f}%")
+        elif total_weight > 100:
+            st.error(f"❌ Total vægtning: {total_weight:.1f}% (for høj)")
+        else:
+            st.warning(f"⚠️ Total vægtning: {total_weight:.1f}% (for lav)")
+
+        # Check if weights changed
+        current_signature = str(sorted(st.session_state.current_weights.items()))
+        temp_signature = str(sorted(temp_weights.items()))
+        weights_changed_now = current_signature != temp_signature
+
+        # Update session state
+        if weights_changed_now:
+            st.session_state.weights_changed = True
+            # Auto-normalize if over 100%
+            if total_weight > 100:
+                temp_weights = scoring_engine.normalize_weights(temp_weights)
+
+        # Recalculate scores button
+        recalc_disabled = not st.session_state.weights_changed or abs(total_weight - 100.0) > 0.1
+        if st.button("🔄 Genberegn Scores", disabled=recalc_disabled, type="primary", key="main_recalc_scores"):
+            st.session_state.current_weights = temp_weights.copy()
+            st.session_state.weights_changed = False
+            scoring_engine.clear_cache()  # Clear cache to force recalculation
+            st.rerun()
+
+# ======== FILTER SEKTION ========
+st.sidebar.title("🔍 **Filtrer Boliger**")
 
 # Create filters on the right side of the screen
 zip_codes = sorted(listings_scored['zip_code'].unique())
@@ -81,7 +176,7 @@ st.sidebar.subheader("📊 Basis Filtre")
 max_budget = st.sidebar.number_input("Maksimalt budget", min_value=0, max_value=15000000, value=4000000, step=500000)
 min_rooms = st.sidebar.number_input("Minimum antal værelser", min_value=0, max_value=15, value=5)
 min_m2 = st.sidebar.number_input("Minimum m²", min_value=0, max_value=1000, value=150)
-min_score = st.sidebar.number_input("Minimum samlet score", min_value=0, max_value=80, value=40, step=1)
+min_score = st.sidebar.number_input("Minimum samlet score", min_value=0, max_value=100, value=50, step=1)
 
 # New enhanced filters
 st.sidebar.subheader("🏗️ Boligdetaljer")
@@ -107,6 +202,9 @@ if not show_already_seen_houses:
 else:
     filtered_listings = listings_scored      
 
+# Apply dynamic scoring to filtered listings
+filtered_listings = scoring_engine.apply_scoring(filtered_listings, st.session_state.current_weights)
+
 # Apply all filters
 # Only filter by zip codes if some are selected
 if selected_zip_codes:
@@ -115,7 +213,7 @@ if selected_zip_codes:
 filtered_listings = filtered_listings[filtered_listings['price'] <= max_budget]
 filtered_listings = filtered_listings[filtered_listings['rooms'] >= min_rooms]
 filtered_listings = filtered_listings[filtered_listings['m2'] >= min_m2]
-filtered_listings = filtered_listings[filtered_listings['total_score'] >= min_score]
+filtered_listings = filtered_listings[filtered_listings['dynamic_score'] >= min_score]
 
 # Enhanced filters
 filtered_listings = filtered_listings[filtered_listings['built'].astype(float) >= min_build_year]
@@ -139,8 +237,8 @@ filtered_listings = filtered_listings[filtered_listings['basement_size'].fillna(
 if show_city_in_zip:
     filtered_listings = filtered_listings[filtered_listings['is_in_zip_code_city'] == show_city_in_zip]
 
-# Sort by total score (highest first)
-filtered_listings = filtered_listings.sort_values(by='total_score', ascending=False)
+# Sort by dynamic score (highest first)
+filtered_listings = filtered_listings.sort_values(by='dynamic_score', ascending=False)
 
 # Display results
 st.write(f"**Fandt {len(filtered_listings)} boliger der matcher dine kriterier**")
@@ -152,8 +250,55 @@ with data_tab:
     
     # Main property information
     if not filtered_listings.empty:
+            # Calculate and display summary statistics with enhanced styling
+            st.markdown("### 📊 **Nøgletal**")
+            col1, col2, col3, col4, col5 = st.columns(5)
+
+            with col1:
+                avg_price_rounded = round(filtered_listings['price'].mean() / 1000) * 1000
+                st.metric(
+                    label="💰 **Gennemsnitspris**", 
+                    value=f"{avg_price_rounded:,.0f} kr",
+                    delta=None,
+                    help="Gennemsnitlig salgspris for filtrerede boliger, afrundet til nærmeste 1.000 kr"
+                )
+
+            with col2:
+                median_price = filtered_listings['price'].median()
+                st.metric(
+                    label="📈 **Median pris**", 
+                    value=f"{median_price:,.0f} kr",
+                    help="Median salgspris - halvdelen af boligerne er dyrere, halvdelen billigere"
+                )
+
+            with col3:
+                total_count = len(filtered_listings)
+                st.metric(
+                    label="🏠 **Antal boliger**", 
+                    value=f"{total_count}",
+                    help="Antal boliger der matcher dine filterkriterier"
+                )
+                
+            with col4:
+                avg_area = filtered_listings['m2'].mean()
+                st.metric(
+                    label="📐 **Gns. areal**", 
+                    value=f"{avg_area:.0f} m²",
+                    help="Gennemsnitligt boligareal i kvadratmeter"
+                )
+                
+            with col5:
+                avg_score = filtered_listings['dynamic_score'].mean()
+                st.metric(
+                    label="⭐ **Gns. Score**", 
+                    value=f"{avg_score:.1f}/100",
+                    help="Gennemsnitlig dynamisk score baseret på dine vægtningsindstillinger"
+                )
+
+            st.markdown("---")  # Visual separator
+
             property_columns = ['full_address', 'price', 'm2_price', 'm2', 'rooms', 'built', 
-                              'energy_class', 'lot_size', 'basement_size', 'days_on_market', 'total_score']
+                              'energy_class', 'lot_size', 'basement_size', 'days_on_market', 'dynamic_score']
             
             st.dataframe(
                 data=filtered_listings[property_columns], 
@@ -161,7 +306,7 @@ with data_tab:
                 use_container_width=True, 
                 hide_index=True,
                 column_config={
-                    "total_score": st.column_config.NumberColumn("Samlet score", format="%.1f"),
+                    "dynamic_score": st.column_config.NumberColumn("Samlet score", format="%.1f"),
                     "price": st.column_config.NumberColumn("Samlet pris", format="%d"),
                     "m2_price": st.column_config.NumberColumn("Pris/m² (scored)", format="%d"),
                     "m2": st.column_config.NumberColumn("m²", format="%d"),
@@ -199,14 +344,34 @@ with data_tab:
 
 with scores_tab:
     if not filtered_listings.empty:
+        # Show current weighting profile
+        st.info(f"📊 **Aktuel vægtningsprofil:** {st.session_state.selected_profile}")
+        
+        # Display current weights
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("**Aktuelle vægte:**")
+            for param, display_name in scoring_engine.SCORE_PARAMETERS.items():
+                weight = st.session_state.current_weights[param]
+                st.write(f"• {display_name}: {weight:.1f}%")
+        
+        with col2:
+            # Show top scorer
+            if len(filtered_listings) > 0:
+                top_house = filtered_listings.iloc[0]
+                st.write("**🏆 Bedste bolig:**")
+                st.write(f"• {top_house['full_address']}")
+                st.write(f"• Score: {top_house['dynamic_score']:.1f}/100")
+                st.write(f"• Pris: {top_house['price']:,.0f} kr")
+        
         # Score breakdown details
         score_columns = ['full_address', 'score_price_efficiency', 'score_house_size', 
                        'score_build_year', 'score_energy', 'score_lot_size', 
-                       'score_basement', 'score_days_market', 'total_score', 'score_train_distance']
+                       'score_basement', 'score_days_market', 'score_train_distance', 'dynamic_score']
         
         st.dataframe(
             data=filtered_listings[score_columns], 
-            height=600, 
+            height=500, 
             use_container_width=True, 
             hide_index=True,
             column_config={
@@ -217,8 +382,8 @@ with scores_tab:
                 "score_lot_size": st.column_config.NumberColumn("Grund", format="%.1f"),
                 "score_basement": st.column_config.NumberColumn("Kælder", format="%.1f"),
                 "score_days_market": st.column_config.NumberColumn("Marked", format="%.1f"),
-                "total_score": st.column_config.NumberColumn("Samlet", format="%.1f"),
                 "score_train_distance": st.column_config.NumberColumn("Tog", format="%.1f"),
+                "dynamic_score": st.column_config.NumberColumn("💯 Total", format="%.1f"),
                 "full_address": st.column_config.TextColumn("Adresse", width="medium")
             }
         )
