@@ -88,15 +88,8 @@ class HousingDataDB:
             )
         """)
         
-        # Create seen_houses table
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS seen_houses (
-                ouId INTEGER PRIMARY KEY,
-                seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
         logging.info("Database tables initialized")
+    
     
     def truncate_listings(self):
         """Clear all listings data."""
@@ -150,17 +143,6 @@ class HousingDataDB:
         """Get all scored listings."""
         return self.conn.execute("SELECT * FROM listings_scored").df()
     
-    def get_seen_houses(self) -> pd.DataFrame:
-        """Get seen houses."""
-        return self.conn.execute("SELECT * FROM seen_houses").df()
-    
-    def add_seen_house(self, ou_id: int):
-        """Add a house to seen list."""
-        self.conn.execute(
-            "INSERT OR REPLACE INTO seen_houses (ouId) VALUES (?)", 
-            [ou_id]
-        )
-        logging.info(f"Added house {ou_id} to seen list")
     
     def get_listings_for_streamlit(self) -> pd.DataFrame:
         """Get listings formatted for Streamlit app."""
@@ -177,9 +159,6 @@ class HousingDataDB:
         FROM listings_scored
         """
         df = self.conn.execute(query).df()
-        
-        # Create full_address column in the DataFrame
-        df['full_address'] = df['address_text'].astype(str) + ' ' + df['house_number'].astype(str)
         
         return df
     

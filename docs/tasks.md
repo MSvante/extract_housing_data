@@ -512,27 +512,27 @@ similarity_score = (
 
 ---
 
-## 11. 🔧 Address Display Refactor
+## 11. 🔧 Address Display Refactor ✅
 
-### 11.1 Fjern Full Address Creation
+### 11.1 Fjern Full Address Creation ✅
 **Beskrivelse**: Opdater transform script til at ikke lave full address string.
 
 **Tasks**:
-- [ ] Fjern `# Create full address` sektion fra `transform_listings_local.py` linje 134
-- [ ] Remove `full_address` fra column selection
-- [ ] Update database schema til at fjerne `full_address` felt hvis nødvendigt
-- [ ] Ensure `address_text`, `house_number`, og `city` er individuelle kolonner
+- [x] Fjern `# Create full address` sektion fra `transform_listings_local.py` linje 134
+- [x] Remove `full_address` fra column selection
+- [x] Update database schema til at fjerne `full_address` felt hvis nødvendigt
+- [x] Ensure `address_text`, `house_number`, og `city` er individuelle kolonner
 
-### 11.2 App Display Update
+### 11.2 App Display Update ✅
 **Beskrivelse**: Vis adresse og by som separate kolonner i Streamlit app.
 
 **Tasks**:
-- [ ] Opdater `app_local.py` til at bruge separate adresse kolonner
-- [ ] Lav address display som: `{address_text} {house_number}`
-- [ ] Vis by som separat kolonne
-- [ ] Update alle steder hvor `full_address` bruges
+- [x] Opdater `app_local.py` til at bruge separate adresse kolonner
+- [x] Lav address display som: `{address_text} {house_number}`
+- [x] Vis by som separat kolonne
+- [x] Update alle steder hvor `full_address` bruges
 
-### 11.3 Clickable Address Implementation
+### 11.3 Clickable Address Implementation ✅
 **Beskrivelse**: Gør adresser clickable og åbner Google søgning.
 
 **Funktionalitet**:
@@ -560,10 +560,10 @@ similarity_score = (
 ## 📅 Implementation Timeline
 
 ### Sprint 1 (2 uger)
-- Task 11: Address refactor  
-- Task 1.1-1.3: Vægtnings system (nye filer: `src/dynamic_scoring.py`)
+- Task 11: Address refactor ✅
+- Task 1.1-1.3: Vægtnings system (nye filer: `src/dynamic_scoring.py`) ✅
 - Task 12.1-12.2: Forbedret seen houses system
-- Task 8.1-8.2: Topscorer cards på forside (ny fil: `src/top_scorers.py`)
+- Task 8.1-8.2: Topscorer cards på forside (ny fil: `src/top_scorers.py`) ✅
 
 ### Sprint 2 (2 uger)  
 - Task 3: Kort funktionalitet (ny fil: `src/map_utils.py`)
