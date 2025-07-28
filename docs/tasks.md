@@ -362,6 +362,21 @@ Denne fil indeholder detaljerede implementeringsopgaver baseret på `next-step.m
 
 ---
 
+## 🗒️ UI Ændringer (Implementeret)
+
+### Ændringer 28/7/2025:
+- [x] Flyttet checkbox filtre (postnummer match og sete huse) til bunden af sidebar
+- [x] Ændret "Scoring Vægtning" til "Vægtning af parametre"
+- [x] Fjernet "Aktuelle vægte" sektion fra vægtnings UI
+- [x] Fjernet "Lokal Version" fra hovedtitel
+- [x] Fjernet "Allerede sete huse" tab (tilføjes igen senere)
+- [x] Fjernet "Markér huse som sete" sektion fra hovedside
+- [x] Tilføjet titel "🏠 Alle Boliger" til hovedtabel
+
+**Note**: "Allerede sete huse" tab skal genimplementeres senere som del af opgave 12.
+
+---
+
 ## 12. 👁️ Forbedret "Set" Huse System
 
 ### 12.1 Database Schema Forbedring

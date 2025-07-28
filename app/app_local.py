@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent / 'src'))
 
 from database_local import HousingDataDB
 from dynamic_scoring import scoring_engine
+from top_scorers import topscorer_calculator
 
 st.set_page_config(layout="wide", page_title="🏠 Boligoversigt - Lokal Version")
 
@@ -56,7 +57,7 @@ if listings_scored.empty:
     st.stop()
 
 # Main app content
-st.title("🏠 Boligoversigt - Lokal Version")
+st.title("🏠 Boligoversigt")
 
 # Initialize session state for weights early
 if 'current_weights' not in st.session_state:
@@ -67,7 +68,7 @@ if 'weights_changed' not in st.session_state:
     st.session_state.weights_changed = False
 
 # ======== VÆGTNINGS SEKTION (Ekspanderbar på hovedsiden) ========
-with st.expander("⚖️ **Scoring Vægtning**", expanded=False):
+with st.expander("⚖️ **Vægtning af parametre**", expanded=False):
     # Create columns for better layout
     col1, col2 = st.columns([1, 2])
     
@@ -81,19 +82,14 @@ with st.expander("⚖️ **Scoring Vægtning**", expanded=False):
             key="main_profile_selector"
         )
 
-        # Check if profile changed
+        # Check if profile changed - don't collapse expander
         if selected_profile != st.session_state.selected_profile:
             st.session_state.selected_profile = selected_profile
             st.session_state.current_weights = scoring_engine.get_profile_weights(selected_profile)
             st.session_state.weights_changed = True
+            # Don't rerun to keep expander open
 
         st.write(f"**Aktiv profil:** {selected_profile}")
-        
-        # Show current weights summary
-        st.write("**Aktuelle vægte:**")
-        for param, display_name in scoring_engine.SCORE_PARAMETERS.items():
-            weight = st.session_state.current_weights[param]
-            st.write(f"• {display_name}: {weight:.1f}%")
     
     with col2:
         # Weight sliders
@@ -160,20 +156,19 @@ with st.expander("⚖️ **Scoring Vægtning**", expanded=False):
             st.session_state.current_weights = temp_weights.copy()
             st.session_state.weights_changed = False
             scoring_engine.clear_cache()  # Clear cache to force recalculation
+            topscorer_calculator.clear_cache()  # Clear topscorer cache too
             st.rerun()
 
 # ======== FILTER SEKTION ========
 st.sidebar.title("🔍 **Filtrer Boliger**")
 
-# Create filters on the right side of the screen
+# Postnummer filter først
 zip_codes = sorted(listings_scored['zip_code'].unique())
-show_city_in_zip = st.sidebar.checkbox("Vis kun boliger med hvor bynavn er det samme som postnummeret", value=True)
-show_already_seen_houses = st.sidebar.checkbox("Vis huse der allerede er markeret som set", value=False)
 selected_zip_codes = st.sidebar.multiselect("Vælg postnumre", zip_codes, default=['8370','8382'])
 
 # Enhanced filters
 st.sidebar.subheader("📊 Basis Filtre")
-max_budget = st.sidebar.number_input("Maksimalt budget", min_value=0, max_value=15000000, value=4000000, step=500000)
+max_budget = st.sidebar.number_input("Maksimalt budget", min_value=0, max_value=15000000, value=5000000, step=500000)
 min_rooms = st.sidebar.number_input("Minimum antal værelser", min_value=0, max_value=15, value=5)
 min_m2 = st.sidebar.number_input("Minimum m²", min_value=0, max_value=1000, value=150)
 min_score = st.sidebar.number_input("Minimum samlet score", min_value=0, max_value=100, value=50, step=1)
@@ -186,6 +181,11 @@ selected_energy_classes = st.sidebar.multiselect("Energiklasser", energy_classes
 
 min_lot_size = st.sidebar.number_input("Minimum grundstørrelse (m²)", min_value=0, max_value=5000, value=0)
 min_basement_size = st.sidebar.number_input("Minimum kælderstørrelse (m²)", min_value=0, max_value=500, value=0)
+
+# Checkbox filtre i bunden
+st.sidebar.subheader("🔧 Avancerede Filtre")
+show_city_in_zip = st.sidebar.checkbox("Vis kun boliger med hvor bynavn er det samme som postnummeret", value=True)
+show_already_seen_houses = st.sidebar.checkbox("Vis huse der allerede er markeret som set", value=False)
 
 # Join the seen_houses onto the listings_scored dataframe
 if not seen_houses.empty:
@@ -240,16 +240,84 @@ if show_city_in_zip:
 # Sort by dynamic score (highest first)
 filtered_listings = filtered_listings.sort_values(by='dynamic_score', ascending=False)
 
-# Display results
-st.write(f"**Fandt {len(filtered_listings)} boliger der matcher dine kriterier**")
+# ======== TOPSCORER SEKTION ========
+st.markdown("### 🏆 **Topscorere**")
 
-# Create tabs for different views
-data_tab, scores_tab, seen_tab = st.tabs(["🏠 Boliger", "📊 Pointdetaljer", "🔍 Allerede sete huse"])
-with data_tab:
-    st.info("💡 **Vigtigt**: Pris-scoren baseres på **pris per m²**, ikke samlet pris. Dette betyder at et stort hus med lav m²-pris kan score højere end et lille hus med høj m²-pris.")
+# Calculate topscorers based on filtered data
+if not filtered_listings.empty:
+    topscorers = topscorer_calculator.calculate_topscorers(filtered_listings)
     
-    # Main property information
-    if not filtered_listings.empty:
+    if topscorers:
+        # Create expandable topscorer section
+        with st.expander("🏆 **Se Topscorere**", expanded=True):
+            # Display topscorers in a 4-column grid
+            categories = list(topscorers.keys())
+            
+            # Create rows of 4 cards each
+            for i in range(0, len(categories), 4):
+                cols = st.columns(4)
+                for j, col in enumerate(cols):
+                    if i + j < len(categories):
+                        category_id = categories[i + j]
+                        topscorer_data = topscorers[category_id]
+                        
+                        with col:
+                            # Create card for each topscorer
+                            card_html = f"""
+                            <div style="
+                                border: 2px solid #e1e5e9;
+                                border-radius: 10px;
+                                padding: 15px;
+                                margin: 5px 0;
+                                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                height: 200px;
+                                display: flex;
+                                flex-direction: column;
+                                justify-content: space-between;
+                            ">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 2rem; margin-bottom: 5px;">
+                                        {topscorer_data['icon']}
+                                    </div>
+                                    <div style="font-weight: bold; font-size: 0.9rem; color: #495057; margin-bottom: 8px;">
+                                        {topscorer_data['name']}
+                                    </div>
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: #28a745; margin-bottom: 8px;">
+                                        {topscorer_data['winning_value']}
+                                    </div>
+                                </div>
+                                <div style="border-top: 1px solid #dee2e6; padding-top: 10px;">
+                                    <div style="font-size: 0.8rem; color: #6c757d; text-align: center; margin-bottom: 5px;">
+                                        {topscorer_data['property']['full_address'][:30]}{'...' if len(topscorer_data['property']['full_address']) > 30 else ''}
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: #868e96; text-align: center;">
+                                        {topscorer_data['property']['city']} • {topscorer_data['property']['price']:,.0f} kr
+                                    </div>
+                                </div>
+                            </div>
+                            """
+                            st.markdown(card_html, unsafe_allow_html=True)
+                            
+                            # Add button to add to seen houses
+                            if st.button(f"👁️ Markér som set", key=f"seen_{category_id}", help="Tilføj til sete huse"):
+                                try:
+                                    add_seen_house(int(topscorer_data['property']['ouId']))
+                                    st.success(f"Bolig tilføjet til sete huse!")
+                                    st.cache_data.clear()
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Fejl: {e}")
+    else:
+        st.info("Ingen topscorere fundet for de aktuelle filtre.")
+else:
+    st.info("Ingen data tilgængelig for topscorere.")
+
+st.markdown("---")  # Visual separator
+
+# Display results
+# Main property information
+if not filtered_listings.empty:
             # Calculate and display summary statistics with enhanced styling
             st.markdown("### 📊 **Nøgletal**")
             col1, col2, col3, col4, col5 = st.columns(5)
@@ -297,6 +365,8 @@ with data_tab:
 
             st.markdown("---")  # Visual separator
 
+            st.markdown("---")  # Visual separator
+
             # Add clickable Google search links for properties
             filtered_listings_display = filtered_listings.copy()
             
@@ -314,6 +384,9 @@ with data_tab:
                 create_google_search_url, axis=1
             )
 
+            # Tabel titel
+            st.subheader("🏠 Alle Boliger")
+            
             property_columns = ['full_address', 'city', 'price', 'm2_price', 'm2', 'rooms', 'built', 
                               'energy_class', 'lot_size', 'basement_size', 'days_on_market', 'dynamic_score', 'search_link']
             
@@ -325,13 +398,17 @@ with data_tab:
                 column_config={
                     "dynamic_score": st.column_config.NumberColumn("Samlet score", format="%.1f"),
                     "price": st.column_config.NumberColumn("Samlet pris", format="%d"),
-                    "m2_price": st.column_config.NumberColumn("Pris/m² (scored)", format="%d"),
+                    "m2_price": st.column_config.NumberColumn(
+                        "Pris/m²", 
+                        format="%d",
+                        help="💡 Pris-scoren baseres på pris per m², ikke samlet pris. Dette betyder at et stort hus med lav m²-pris kan score højere end et lille hus med høj m²-pris."
+                    ),
                     "m2": st.column_config.NumberColumn("m²", format="%d"),
                     "rooms": st.column_config.NumberColumn("Værelser", format="%d"),
                     "built": st.column_config.TextColumn("Byggeår"),
                     "energy_class": st.column_config.TextColumn("Energiklasse"),
                     "lot_size": st.column_config.NumberColumn("Grundstørrelse", format="%d"),
-                    "basement_size": st.column_config.NumberColumn("Kælder", format="%d"),
+                    "basement_size": st.column_config.NumberColumn("Kælderstørrelse", format="%d"),
                     "days_on_market": st.column_config.NumberColumn("Dage på marked", format="%d"),
                     "full_address": st.column_config.TextColumn("Adresse", width="large"),
                     "city": st.column_config.TextColumn("By", width="medium"),
@@ -343,127 +420,14 @@ with data_tab:
                     )
                 }
             )
-
-            # Add to seen houses functionality
-            st.subheader("Markér huse som sete")
-            ouid_input = st.text_input("Indtast ouID'er adskilt af kommaer")
-            if st.button("Tilføj til sete huse"):
-                ouids = [ouid.strip() for ouid in ouid_input.split(",") if ouid.strip()]
-                if ouids:
-                    try:
-                        for ouid in ouids:
-                            add_seen_house(int(ouid))
-                        st.success("ouID'er tilføjet til sete huse")
-                        # Clear cache to refresh data
-                        st.cache_data.clear()
-                        st.rerun()
-                    except ValueError:
-                        st.error("Indtast venligst gyldige numeriske ouID'er")
-                    except Exception as e:
-                        st.error(f"Fejl ved tilføjelse: {e}")
-                else:
-                    st.error("Indtast venligst gyldige ouID'er")
-    else:
-        st.warning("Ingen boliger matcher dine filterkriterier.")
-
-with scores_tab:
-    if not filtered_listings.empty:
-        # Show current weighting profile
-        st.info(f"📊 **Aktuel vægtningsprofil:** {st.session_state.selected_profile}")
-        
-        # Display current weights
-        col1, col2 = st.columns(2)
-        with col1:
-            st.write("**Aktuelle vægte:**")
-            for param, display_name in scoring_engine.SCORE_PARAMETERS.items():
-                weight = st.session_state.current_weights[param]
-                st.write(f"• {display_name}: {weight:.1f}%")
-        
-        with col2:
-            # Show top scorer
-            if len(filtered_listings) > 0:
-                top_house = filtered_listings.iloc[0]
-                st.write("**🏆 Bedste bolig:**")
-                st.write(f"• {top_house['full_address']}")
-                st.write(f"• Score: {top_house['dynamic_score']:.1f}/100")
-                st.write(f"• Pris: {top_house['price']:,.0f} kr")
-        
-        # Score breakdown details with clickable links
-        filtered_listings_scores = filtered_listings.copy()
-        
-        def create_google_search_url(row):
-            address = row['full_address']
-            city = row['city']
-            # Google search for property
-            search_query = f'"{address}" "{city}"'
-            # URL encode the search query
-            import urllib.parse
-            encoded_query = urllib.parse.quote(search_query)
-            return f"https://www.google.com/search?q={encoded_query}"
-        
-        filtered_listings_scores['search_link'] = filtered_listings_scores.apply(
-            create_google_search_url, axis=1
-        )
-        
-        score_columns = ['full_address', 'city', 'score_price_efficiency', 'score_house_size', 
-                       'score_build_year', 'score_energy', 'score_lot_size', 
-                       'score_basement', 'score_days_market', 'score_train_distance', 'dynamic_score', 'search_link']
-        
-        st.dataframe(
-            data=filtered_listings_scores[score_columns], 
-            height=500, 
-            use_container_width=True, 
-            hide_index=True,
-            column_config={
-                "score_price_efficiency": st.column_config.NumberColumn("Pris/m²", format="%.1f"),
-                "score_house_size": st.column_config.NumberColumn("Størrelse", format="%.1f"),
-                "score_build_year": st.column_config.NumberColumn("År", format="%.1f"),
-                "score_energy": st.column_config.NumberColumn("Energi", format="%.1f"),
-                "score_lot_size": st.column_config.NumberColumn("Grund", format="%.1f"),
-                "score_basement": st.column_config.NumberColumn("Kælder", format="%.1f"),
-                "score_days_market": st.column_config.NumberColumn("Marked", format="%.1f"),
-                "score_train_distance": st.column_config.NumberColumn("Tog", format="%.1f"),
-                "dynamic_score": st.column_config.NumberColumn("💯 Total", format="%.1f"),
-                "full_address": st.column_config.TextColumn("Adresse", width="medium"),
-                "city": st.column_config.TextColumn("By", width="small"),
-                "search_link": st.column_config.LinkColumn(
-                    "Søg",
-                    help="Søg efter denne bolig på Google",
-                    width="small",
-                    display_text="🔍"
-                )
-            }
-        )
-    else:
-        st.warning("Ingen boliger matcher dine filterkriterier.")
-
-with seen_tab:
-    # Seen Houses section
-    st.subheader("🔍 Sete Huse")
-    
-    if not seen_houses.empty:
-        # Join seen houses with listings for addresses
-        seen_with_addresses = seen_houses.merge(
-            listings_scored[['ouId', 'full_address']], 
-            on='ouId', 
-            how='left'
-        )
-        st.dataframe(
-            data=seen_with_addresses[['full_address', 'seen_at']], 
-            height=400, 
-            use_container_width=True, 
-            hide_index=True,
-            column_config={
-                "full_address": st.column_config.TextColumn("Adresse"),
-                "seen_at": st.column_config.DatetimeColumn("Set dato")
-            }
-        )
-    else:
-        st.info("Ingen huse er markeret som sete endnu.")
+else:
+    st.warning("Ingen boliger matcher dine filterkriterier.")
 
 # Add refresh data button
 if st.sidebar.button("🔄 Genindlæs data"):
     st.cache_data.clear()
+    scoring_engine.clear_cache()
+    topscorer_calculator.clear_cache()
     st.rerun()
 
 # Show data freshness
