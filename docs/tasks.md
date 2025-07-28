@@ -44,7 +44,7 @@ Denne fil indeholder detaljerede implementeringsopgaver baseret på `next-step.m
 - [x] Implementer sliders for hver parameter (0-100%)
 - [x] Real-time validering og normalisering af vægte (kun UI feedback)
 - [x] Vis total vægtning (skal være 100%) med color coding
-- [ ] Auto-justér andre vægte når én ændres (optional behavior)
+- [x] Auto-justér andre vægte når én ændres (optional behavior)
 - [x] Tilføj "🔄 Genberegn Scores" knap som trigger re-scoring
 - [x] Disable/enable knap baseret på om vægte har ændret sig
 
@@ -71,9 +71,9 @@ Denne fil indeholder detaljerede implementeringsopgaver baseret på `next-step.m
 
 **Tasks**:
 - [x] Cache score beregninger baseret på weight signature
-- [ ] Vis loading spinner under score genberegning
-- [ ] Vis progress bar ved store datasets
-- [ ] Optimer pandas operations for score calculation
+- [x] Vis loading spinner under score genberegning
+- [x] Vis progress bar ved store datasets
+- [x] Optimer pandas operations for score calculation
 - [x] Implementer state management så kun ændrede vægte trigger genberegning
 
 ---
@@ -526,19 +526,19 @@ similarity_score = (
 - Dette finder typisk mægler opslag på boliga.dk
 
 **Tasks**:
-- [ ] Implementer clickable address links i Streamlit
-- [ ] Format Google søge URL korrekt
-- [ ] Test at søgningen finder relevante sider
-- [ ] Overvej alternative søge strategier (direct boliga.dk link via ouId)
+- [x] Implementer clickable address links i Streamlit
+- [x] Format Google søge URL korrekt
+- [x] Test at søgningen finder relevante sider
+- [x] Overvej alternative søge strategier (direct boliga.dk link via ouId)
 
 **Alternative implementation**:
 - Direct link til boliga.dk via ouId: `https://www.boliga.dk/bolig/[ouId]`
 - Kan være mere direkte end Google søgning
 
 **Tasks for alternative**:
-- [ ] Test direct boliga.dk URL pattern
-- [ ] Implementer hvis URL pattern er stabil
-- [ ] Fallback til Google søgning hvis direct link fejler
+- [x] Test direct boliga.dk URL pattern
+- [x] Implementer hvis URL pattern er stabil
+- [x] Fallback til Google søgning hvis direct link fejler
 
 ---
 

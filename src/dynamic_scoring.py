@@ -260,24 +260,29 @@ class DynamicScoringEngine:
             # Normalize weights to 100%
             weights = self.normalize_weights(weights)
         
-        # Calculate dynamic scores
+        # Calculate dynamic scores (optimized pandas operations)
         df_result = df.copy()
-        dynamic_scores = []
         
-        for _, row in df.iterrows():
-            total_score = 0.0
-            
-            for param, weight in weights.items():
-                if param in row and pd.notna(row[param]):
-                    # Each individual score is 0-10, weight is percentage
-                    total_score += (row[param] * weight / 100.0)
-            
-            # Scale to 0-100 range (since each component is 0-10 and weights sum to 100%)
-            scaled_score = total_score * 10  # 10 components * 10 max points = 100 max
-            dynamic_scores.append(round(scaled_score, 1))
+        # Ensure all score columns exist, fill missing with 0
+        for param in weights.keys():
+            if param not in df_result.columns:
+                df_result[param] = 0.0
+                logging.warning(f"Missing score column {param}, filled with 0")
+        
+        # Vectorized calculation - much faster than iterrows()
+        dynamic_scores = pd.Series(0.0, index=df_result.index)
+        
+        for param, weight in weights.items():
+            if param in df_result.columns:
+                # Vectorized operation: multiply entire column by weight
+                param_scores = df_result[param].fillna(0.0) * (weight / 100.0)
+                dynamic_scores += param_scores
+        
+        # Scale to 0-100 range and round
+        dynamic_scores = (dynamic_scores * 10).round(1)
         
         # Cache the results
-        self._score_cache[cache_key] = dynamic_scores
+        self._score_cache[cache_key] = dynamic_scores.tolist()
         df_result['dynamic_score'] = dynamic_scores
         
         logging.info(f"Calculated {len(dynamic_scores)} dynamic scores with signature {cache_key}")

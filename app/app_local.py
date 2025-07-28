@@ -297,11 +297,28 @@ with data_tab:
 
             st.markdown("---")  # Visual separator
 
-            property_columns = ['full_address', 'price', 'm2_price', 'm2', 'rooms', 'built', 
-                              'energy_class', 'lot_size', 'basement_size', 'days_on_market', 'dynamic_score']
+            # Add clickable Google search links for properties
+            filtered_listings_display = filtered_listings.copy()
+            
+            def create_google_search_url(row):
+                address = row['full_address']
+                city = row['city']
+                # Google search for property
+                search_query = f'"{address}" "{city}"'
+                # URL encode the search query
+                import urllib.parse
+                encoded_query = urllib.parse.quote(search_query)
+                return f"https://www.google.com/search?q={encoded_query}"
+            
+            filtered_listings_display['search_link'] = filtered_listings_display.apply(
+                create_google_search_url, axis=1
+            )
+
+            property_columns = ['full_address', 'city', 'price', 'm2_price', 'm2', 'rooms', 'built', 
+                              'energy_class', 'lot_size', 'basement_size', 'days_on_market', 'dynamic_score', 'search_link']
             
             st.dataframe(
-                data=filtered_listings[property_columns], 
+                data=filtered_listings_display[property_columns], 
                 height=600, 
                 use_container_width=True, 
                 hide_index=True,
@@ -316,7 +333,14 @@ with data_tab:
                     "lot_size": st.column_config.NumberColumn("Grundstørrelse", format="%d"),
                     "basement_size": st.column_config.NumberColumn("Kælder", format="%d"),
                     "days_on_market": st.column_config.NumberColumn("Dage på marked", format="%d"),
-                    "full_address": st.column_config.TextColumn("Adresse", width="large")
+                    "full_address": st.column_config.TextColumn("Adresse", width="large"),
+                    "city": st.column_config.TextColumn("By", width="medium"),
+                    "search_link": st.column_config.LinkColumn(
+                        "Søg",
+                        help="Søg efter denne bolig på Google",
+                        width="small",
+                        display_text="🔍"
+                    )
                 }
             )
 
@@ -364,13 +388,29 @@ with scores_tab:
                 st.write(f"• Score: {top_house['dynamic_score']:.1f}/100")
                 st.write(f"• Pris: {top_house['price']:,.0f} kr")
         
-        # Score breakdown details
-        score_columns = ['full_address', 'score_price_efficiency', 'score_house_size', 
+        # Score breakdown details with clickable links
+        filtered_listings_scores = filtered_listings.copy()
+        
+        def create_google_search_url(row):
+            address = row['full_address']
+            city = row['city']
+            # Google search for property
+            search_query = f'"{address}" "{city}"'
+            # URL encode the search query
+            import urllib.parse
+            encoded_query = urllib.parse.quote(search_query)
+            return f"https://www.google.com/search?q={encoded_query}"
+        
+        filtered_listings_scores['search_link'] = filtered_listings_scores.apply(
+            create_google_search_url, axis=1
+        )
+        
+        score_columns = ['full_address', 'city', 'score_price_efficiency', 'score_house_size', 
                        'score_build_year', 'score_energy', 'score_lot_size', 
-                       'score_basement', 'score_days_market', 'score_train_distance', 'dynamic_score']
+                       'score_basement', 'score_days_market', 'score_train_distance', 'dynamic_score', 'search_link']
         
         st.dataframe(
-            data=filtered_listings[score_columns], 
+            data=filtered_listings_scores[score_columns], 
             height=500, 
             use_container_width=True, 
             hide_index=True,
@@ -384,7 +424,14 @@ with scores_tab:
                 "score_days_market": st.column_config.NumberColumn("Marked", format="%.1f"),
                 "score_train_distance": st.column_config.NumberColumn("Tog", format="%.1f"),
                 "dynamic_score": st.column_config.NumberColumn("💯 Total", format="%.1f"),
-                "full_address": st.column_config.TextColumn("Adresse", width="medium")
+                "full_address": st.column_config.TextColumn("Adresse", width="medium"),
+                "city": st.column_config.TextColumn("By", width="small"),
+                "search_link": st.column_config.LinkColumn(
+                    "Søg",
+                    help="Søg efter denne bolig på Google",
+                    width="small",
+                    display_text="🔍"
+                )
             }
         )
     else:

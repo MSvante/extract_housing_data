@@ -166,17 +166,22 @@ class HousingDataDB:
         """Get listings formatted for Streamlit app."""
         query = """
         SELECT 
-            full_address, price, m2, m2_price, rooms, 
+            address_text, house_number, city, price, m2, m2_price, rooms, 
             CAST(built AS VARCHAR) as built,
             zip_code, days_on_market, is_in_zip_code_city, 
-            total_score, ouId,
+            ouId,
             energy_class, lot_size, basement_size, 
             score_energy, score_train_distance, score_lot_size, 
             score_house_size, score_price_efficiency, score_build_year,
             score_basement, score_days_market
         FROM listings_scored
         """
-        return self.conn.execute(query).df()
+        df = self.conn.execute(query).df()
+        
+        # Create full_address column in the DataFrame
+        df['full_address'] = df['address_text'].astype(str) + ' ' + df['house_number'].astype(str)
+        
+        return df
     
     def close(self):
         """Close database connection."""
@@ -193,7 +198,6 @@ def main():
         'address_text': 'Test Street',
         'house_number': 1,
         'city': 'Aarhus C',
-        'full_address': 'Test Street 1 Aarhus C',
         'price': 1000000.0,
         'm2': 100,
         'm2_price': 10000,
