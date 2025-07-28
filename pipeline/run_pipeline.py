@@ -50,14 +50,25 @@ def main():
         logging.info("Transforming and scoring listings...")
         df_scored = transform_listings(df_raw)
         
-        # Insert scored data
+        # Apply dynamic scoring to get dynamic_score for pipeline stats
+        import sys
+        from pathlib import Path
+        sys.path.append(str(Path(__file__).parent.parent / 'src'))
+        from dynamic_scoring import scoring_engine
+        df_with_dynamic_score = scoring_engine.apply_scoring(df_scored, scoring_engine.DEFAULT_WEIGHTS)
+        
+        # Insert scored data (without dynamic_score column as it's calculated in frontend)
         db.insert_scored_listings(df_scored)
         
         logging.info(f"Pipeline completed successfully. Processed {len(df_scored)} listings.")
         
-        # Show some stats
-        top_scores = df_scored.nlargest(5, 'total_score')[['full_address', 'total_score', 'price']]
-        logging.info(f"Top 5 scored properties:\n{top_scores}")
+        # Show some stats using the data with dynamic scores
+        try:
+            top_scores = df_with_dynamic_score.nlargest(5, 'dynamic_score')[['dynamic_score', 'price']]
+            logging.info(f"Top 5 scored properties:\n{top_scores}")
+        except Exception as e:
+            logging.warning(f"Could not display top scores: {e}")
+            logging.info(f"Pipeline completed with {len(df_scored)} properties processed")
         
         db.close()
         return True

@@ -110,8 +110,6 @@ class TopScorerCalculator:
                         'property': top_property,
                         'winning_value': self._get_winning_value(top_property, category_config)
                     }
-                else:
-                    logger.warning(f"No top property found for category: {category_id}")
                     
             except Exception as e:
                 logger.error(f"Error calculating topscorer for {category_id}: {e}")
@@ -160,28 +158,34 @@ class TopScorerCalculator:
             if valid_data.empty:
                 return None
             sort_column = column
-        
+
         # Sort and get top property
         try:
             sorted_data = valid_data.sort_values(by=sort_column, ascending=ascending)
+            if sorted_data.empty:
+                return None
+                
             top_row = sorted_data.iloc[0]
             
             # Convert to dictionary and ensure serializable types
             property_dict = {}
             for col, val in top_row.items():
-                if pd.isna(val):
-                    property_dict[col] = None
-                elif isinstance(val, (pd.Timestamp, pd.NaT)):
+                try:
+                    if pd.isna(val):
+                        property_dict[col] = None
+                    elif isinstance(val, pd.Timestamp):
+                        property_dict[col] = str(val)
+                    else:
+                        property_dict[col] = val
+                except Exception as e:
                     property_dict[col] = str(val)
-                else:
-                    property_dict[col] = val
             
             return property_dict
             
         except Exception as e:
             logger.error(f"Error sorting data for column {column}: {e}")
             return None
-    
+
     def _get_winning_value(self, property_data: Dict, category_config: Dict) -> str:
         """
         Get formatted winning value for display.

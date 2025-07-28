@@ -36,14 +36,6 @@ def get_seen_houses():
     finally:
         db.close()
 
-def add_seen_house(ou_id: int):
-    """Add house to seen list."""
-    db = HousingDataDB()
-    try:
-        db.add_seen_house(ou_id)
-    finally:
-        db.close()
-
 # Load data
 try:
     listings_scored = get_listings_data()
@@ -69,95 +61,83 @@ if 'weights_changed' not in st.session_state:
 
 # ======== VÆGTNINGS SEKTION (Ekspanderbar på hovedsiden) ========
 with st.expander("⚖️ **Vægtning af parametre**", expanded=False):
-    # Create columns for better layout
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        # Profile selector
-        profile_names = scoring_engine.get_profile_names()
-        selected_profile = st.selectbox(
-            "📋 Vælg profil:",
-            profile_names,
-            index=profile_names.index(st.session_state.selected_profile),
-            key="main_profile_selector"
-        )
+    # Profile selector at the top
+    profile_names = scoring_engine.get_profile_names()
+    selected_profile = st.selectbox(
+        "📋 Vælg profil:",
+        profile_names,
+        index=profile_names.index(st.session_state.selected_profile),
+        key="main_profile_selector"
+    )
 
-        # Check if profile changed - don't collapse expander
-        if selected_profile != st.session_state.selected_profile:
-            st.session_state.selected_profile = selected_profile
-            st.session_state.current_weights = scoring_engine.get_profile_weights(selected_profile)
-            st.session_state.weights_changed = True
-            # Don't rerun to keep expander open
+    # Check if profile changed - don't collapse expander
+    if selected_profile != st.session_state.selected_profile:
+        st.session_state.selected_profile = selected_profile
+        st.session_state.current_weights = scoring_engine.get_profile_weights(selected_profile)
+        st.session_state.weights_changed = True
+        # Don't rerun to keep expander open
 
-        st.write(f"**Aktiv profil:** {selected_profile}")
-    
-    with col2:
-        # Weight sliders
-        st.write("**Juster vægtning (%):**")
-        temp_weights = {}
-        total_weight = 0
+    # Weight sliders in full width
+    st.write("**Juster vægtning (%):**")
+    temp_weights = {}
+    total_weight = 0
 
-        # Create two columns for sliders
-        slider_col1, slider_col2 = st.columns(2)
-        params_list = list(scoring_engine.SCORE_PARAMETERS.items())
-        mid_point = len(params_list) // 2
+    # Create two columns for sliders
+    slider_col1, slider_col2 = st.columns(2)
+    params_list = list(scoring_engine.SCORE_PARAMETERS.items())
+    mid_point = len(params_list) // 2
         
-        with slider_col1:
-            for param, display_name in params_list[:mid_point]:
-                current_value = st.session_state.current_weights[param]
-                new_value = st.slider(
-                    f"{display_name}:",
-                    min_value=0.0,
-                    max_value=50.0,
-                    value=current_value,
-                    step=0.5,
-                    key=f"main_weight_{param}"
-                )
-                temp_weights[param] = new_value
-                total_weight += new_value
-        
-        with slider_col2:
-            for param, display_name in params_list[mid_point:]:
-                current_value = st.session_state.current_weights[param]
-                new_value = st.slider(
-                    f"{display_name}:",
-                    min_value=0.0,
-                    max_value=50.0,
-                    value=current_value,
-                    step=0.5,
-                    key=f"main_weight_{param}"
-                )
-                temp_weights[param] = new_value
-                total_weight += new_value
+    with slider_col1:
+        for param, label in params_list[:mid_point]:
+            temp_weights[param] = st.slider(
+                label,
+                min_value=0,
+                max_value=50,
+                value=int(st.session_state.current_weights[param]),
+                key=f"weight_{param}",
+                help=f"Vægtning for {label.lower()}"
+            )
+            total_weight += temp_weights[param]
 
-        # Show total weight with color coding
-        if abs(total_weight - 100.0) < 0.1:
-            st.success(f"✅ Total vægtning: {total_weight:.1f}%")
-        elif total_weight > 100:
-            st.error(f"❌ Total vægtning: {total_weight:.1f}% (for høj)")
+    with slider_col2:
+        for param, label in params_list[mid_point:]:
+            temp_weights[param] = st.slider(
+                label,
+                min_value=0,
+                max_value=50,
+                value=int(st.session_state.current_weights[param]),
+                key=f"weight_{param}",
+                help=f"Vægtning for {label.lower()}"
+            )
+            total_weight += temp_weights[param]
+
+    # Show total weight only if it's not 100%
+    if total_weight != 100:
+        if total_weight > 100:
+            st.error(f"⚠️ **Total vægtning: {total_weight}%** (Reducér nogle vægte)")
         else:
-            st.warning(f"⚠️ Total vægtning: {total_weight:.1f}% (for lav)")
+            st.warning(f"⚠️ **Total vægtning: {total_weight}%** (Mangler {100-total_weight}%)")
+    
+    # Check if weights changed
+    current_signature = str(sorted(st.session_state.current_weights.items()))
+    temp_signature = str(sorted(temp_weights.items()))
+    weights_changed_now = current_signature != temp_signature
 
-        # Check if weights changed
-        current_signature = str(sorted(st.session_state.current_weights.items()))
-        temp_signature = str(sorted(temp_weights.items()))
-        weights_changed_now = current_signature != temp_signature
+    # Update session state
+    if weights_changed_now:
+        st.session_state.weights_changed = True
+        # Auto-normalize if over 100%
+        if total_weight > 100:
+            temp_weights = scoring_engine.normalize_weights(temp_weights)
 
-        # Update session state
-        if weights_changed_now:
-            st.session_state.weights_changed = True
-            # Auto-normalize if over 100%
-            if total_weight > 100:
-                temp_weights = scoring_engine.normalize_weights(temp_weights)
-
-        # Recalculate scores button
-        recalc_disabled = not st.session_state.weights_changed or abs(total_weight - 100.0) > 0.1
-        if st.button("🔄 Genberegn Scores", disabled=recalc_disabled, type="primary", key="main_recalc_scores"):
-            st.session_state.current_weights = temp_weights.copy()
-            st.session_state.weights_changed = False
-            scoring_engine.clear_cache()  # Clear cache to force recalculation
-            topscorer_calculator.clear_cache()  # Clear topscorer cache too
-            st.rerun()
+    # Recalculate scores button
+    recalc_disabled = not st.session_state.weights_changed or abs(total_weight - 100.0) > 0.1
+    if st.button("🔄 Genberegn Scores", disabled=recalc_disabled, type="primary", key="main_recalc_scores"):
+        st.session_state.current_weights = temp_weights.copy()
+        st.session_state.weights_changed = False
+        scoring_engine.clear_cache()  # Clear cache to force recalculation
+        topscorer_calculator.clear_cache()  # Clear topscorer cache too
+        st.rerun()
 
 # ======== FILTER SEKTION ========
 st.sidebar.title("🔍 **Filtrer Boliger**")
@@ -240,6 +220,89 @@ if show_city_in_zip:
 # Sort by dynamic score (highest first)
 filtered_listings = filtered_listings.sort_values(by='dynamic_score', ascending=False)
 
+# ======== NØGLETAL SEKTION ========
+if not filtered_listings.empty:
+    st.markdown("### 📊 **Nøgletal**")
+    
+    # Calculate key metrics
+    avg_price_rounded = round(filtered_listings['price'].mean() / 1000) * 1000
+    median_price = filtered_listings['price'].median()
+    total_count = len(filtered_listings)
+    avg_area = filtered_listings['m2'].mean()
+    avg_score = filtered_listings['dynamic_score'].mean()
+    
+    # Create HTML cards for key metrics (similar to topscorer cards)
+    metrics_data = [
+        {
+            'icon': '💰',
+            'name': 'Gennemsnitspris',
+            'value': f"{avg_price_rounded:,.0f} kr",
+            'description': 'Gns. salgspris afrundet til nærmeste 1.000 kr'
+        },
+        {
+            'icon': '📈',
+            'name': 'Median pris',
+            'value': f"{median_price:,.0f} kr",
+            'description': 'Halvdelen af boligerne er dyrere/billigere'
+        },
+        {
+            'icon': '🏠',
+            'name': 'Antal boliger',
+            'value': f"{total_count}",
+            'description': 'Boliger der matcher dine filterkriterier'
+        },
+        {
+            'icon': '📐',
+            'name': 'Gns. areal',
+            'value': f"{avg_area:.0f} m²",
+            'description': 'Gennemsnitligt boligareal'
+        },
+        {
+            'icon': '⭐',
+            'name': 'Gns. Score',
+            'value': f"{avg_score:.1f}/100",
+            'description': 'Baseret på dine vægtningsindstillinger'
+        }
+    ]
+    
+    # Display metrics in rows of 5
+    cols = st.columns(5)
+    for i, metric in enumerate(metrics_data):
+        with cols[i]:
+            card_html = f"""
+            <div style="
+                border: 2px solid #e1e5e9;
+                border-radius: 10px;
+                padding: 15px;
+                margin: 5px 0;
+                background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                height: 160px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                text-align: center;
+            ">
+                <div>
+                    <div style="font-size: 2rem; margin-bottom: 5px;">
+                        {metric['icon']}
+                    </div>
+                    <div style="font-weight: bold; font-size: 0.9rem; color: #495057; margin-bottom: 8px;">
+                        {metric['name']}
+                    </div>
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #2c5aa0; margin-bottom: 8px;">
+                        {metric['value']}
+                    </div>
+                </div>
+                <div style="border-top: 1px solid #dee2e6; padding-top: 8px;">
+                    <div style="font-size: 0.75rem; color: #6c757d; text-align: center;">
+                        {metric['description']}
+                    </div>
+                </div>
+            </div>
+            """
+            st.markdown(card_html, unsafe_allow_html=True)
+
 # ======== TOPSCORER SEKTION ========
 st.markdown("### 🏆 **Topscorere**")
 
@@ -247,126 +310,75 @@ st.markdown("### 🏆 **Topscorere**")
 if not filtered_listings.empty:
     topscorers = topscorer_calculator.calculate_topscorers(filtered_listings)
     
+    # If topscorer_calculator failed, use manual topscorer as fallback
+    if not topscorers:
+        top_row = filtered_listings.sort_values(by='dynamic_score', ascending=False).iloc[0]
+        topscorers = {
+            'best_overall': {
+                'name': 'Bedste Samlet Score',
+                'icon': '🏆',
+                'property': dict(top_row),
+                'winning_value': f"{top_row['dynamic_score']:.1f}/100"
+            }
+        }
+    
     if topscorers:
-        # Create expandable topscorer section
-        with st.expander("🏆 **Se Topscorere**", expanded=True):
-            # Display topscorers in a 4-column grid
-            categories = list(topscorers.keys())
-            
-            # Create rows of 4 cards each
-            for i in range(0, len(categories), 4):
-                cols = st.columns(4)
-                for j, col in enumerate(cols):
-                    if i + j < len(categories):
-                        category_id = categories[i + j]
-                        topscorer_data = topscorers[category_id]
-                        
-                        with col:
-                            # Create card for each topscorer
-                            card_html = f"""
-                            <div style="
-                                border: 2px solid #e1e5e9;
-                                border-radius: 10px;
-                                padding: 15px;
-                                margin: 5px 0;
-                                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                                height: 200px;
-                                display: flex;
-                                flex-direction: column;
-                                justify-content: space-between;
-                            ">
-                                <div style="text-align: center;">
-                                    <div style="font-size: 2rem; margin-bottom: 5px;">
-                                        {topscorer_data['icon']}
-                                    </div>
-                                    <div style="font-weight: bold; font-size: 0.9rem; color: #495057; margin-bottom: 8px;">
-                                        {topscorer_data['name']}
-                                    </div>
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: #28a745; margin-bottom: 8px;">
-                                        {topscorer_data['winning_value']}
-                                    </div>
+        # Display topscorers directly without expander
+        categories = list(topscorers.keys())
+        
+        # Create rows of 4 cards each
+        for i in range(0, len(categories), 4):
+            cols = st.columns(4)
+            for j, col in enumerate(cols):
+                if i + j < len(categories):
+                    category_id = categories[i + j]
+                    topscorer_data = topscorers[category_id]
+                    
+                    with col:
+                        # Create card for each topscorer
+                        card_html = f"""
+                        <div style="
+                            border: 2px solid #e1e5e9;
+                            border-radius: 10px;
+                            padding: 15px;
+                            margin: 5px 0;
+                            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                            height: 200px;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: space-between;
+                        ">
+                            <div style="text-align: center;">
+                                <div style="font-size: 2rem; margin-bottom: 5px;">
+                                    {topscorer_data['icon']}
                                 </div>
-                                <div style="border-top: 1px solid #dee2e6; padding-top: 10px;">
-                                    <div style="font-size: 0.8rem; color: #6c757d; text-align: center; margin-bottom: 5px;">
-                                        {topscorer_data['property']['full_address'][:30]}{'...' if len(topscorer_data['property']['full_address']) > 30 else ''}
-                                    </div>
-                                    <div style="font-size: 0.75rem; color: #868e96; text-align: center;">
-                                        {topscorer_data['property']['city']} • {topscorer_data['property']['price']:,.0f} kr
-                                    </div>
+                                <div style="font-weight: bold; font-size: 0.9rem; color: #495057; margin-bottom: 8px;">
+                                    {topscorer_data['name']}
+                                </div>
+                                <div style="font-size: 1.2rem; font-weight: bold; color: #28a745; margin-bottom: 8px;">
+                                    {topscorer_data['winning_value']}
                                 </div>
                             </div>
-                            """
-                            st.markdown(card_html, unsafe_allow_html=True)
-                            
-                            # Add button to add to seen houses
-                            if st.button(f"👁️ Markér som set", key=f"seen_{category_id}", help="Tilføj til sete huse"):
-                                try:
-                                    add_seen_house(int(topscorer_data['property']['ouId']))
-                                    st.success(f"Bolig tilføjet til sete huse!")
-                                    st.cache_data.clear()
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Fejl: {e}")
+                            <div style="border-top: 1px solid #dee2e6; padding-top: 10px;">
+                                <div style="font-size: 0.8rem; color: #6c757d; text-align: center; margin-bottom: 5px;">
+                                    {topscorer_data['property']['full_address'][:30]}{'...' if len(topscorer_data['property']['full_address']) > 30 else ''}
+                                </div>
+                                <div style="font-size: 0.75rem; color: #868e96; text-align: center;">
+                                    {topscorer_data['property']['city']} • {topscorer_data['property']['price']:,.0f} kr
+                                </div>
+                            </div>
+                        </div>
+                        """
+                        st.markdown(card_html, unsafe_allow_html=True)
     else:
         st.info("Ingen topscorere fundet for de aktuelle filtre.")
 else:
     st.info("Ingen data tilgængelig for topscorere.")
 
-st.markdown("---")  # Visual separator
-
 # Display results
 # Main property information
 if not filtered_listings.empty:
-            # Calculate and display summary statistics with enhanced styling
-            st.markdown("### 📊 **Nøgletal**")
-            col1, col2, col3, col4, col5 = st.columns(5)
-
-            with col1:
-                avg_price_rounded = round(filtered_listings['price'].mean() / 1000) * 1000
-                st.metric(
-                    label="💰 **Gennemsnitspris**", 
-                    value=f"{avg_price_rounded:,.0f} kr",
-                    delta=None,
-                    help="Gennemsnitlig salgspris for filtrerede boliger, afrundet til nærmeste 1.000 kr"
-                )
-
-            with col2:
-                median_price = filtered_listings['price'].median()
-                st.metric(
-                    label="📈 **Median pris**", 
-                    value=f"{median_price:,.0f} kr",
-                    help="Median salgspris - halvdelen af boligerne er dyrere, halvdelen billigere"
-                )
-
-            with col3:
-                total_count = len(filtered_listings)
-                st.metric(
-                    label="🏠 **Antal boliger**", 
-                    value=f"{total_count}",
-                    help="Antal boliger der matcher dine filterkriterier"
-                )
-                
-            with col4:
-                avg_area = filtered_listings['m2'].mean()
-                st.metric(
-                    label="📐 **Gns. areal**", 
-                    value=f"{avg_area:.0f} m²",
-                    help="Gennemsnitligt boligareal i kvadratmeter"
-                )
-                
-            with col5:
-                avg_score = filtered_listings['dynamic_score'].mean()
-                st.metric(
-                    label="⭐ **Gns. Score**", 
-                    value=f"{avg_score:.1f}/100",
-                    help="Gennemsnitlig dynamisk score baseret på dine vægtningsindstillinger"
-                )
-
-            st.markdown("---")  # Visual separator
-
-            st.markdown("---")  # Visual separator
-
             # Add clickable Google search links for properties
             filtered_listings_display = filtered_listings.copy()
             
@@ -423,12 +435,27 @@ if not filtered_listings.empty:
 else:
     st.warning("Ingen boliger matcher dine filterkriterier.")
 
-# Add refresh data button
-if st.sidebar.button("🔄 Genindlæs data"):
-    st.cache_data.clear()
-    scoring_engine.clear_cache()
-    topscorer_calculator.clear_cache()
-    st.rerun()
+# Add refresh data button and clear seen houses
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    if st.button("🔄 Genindlæs data"):
+        st.cache_data.clear()
+        scoring_engine.clear_cache()
+        topscorer_calculator.clear_cache()
+        st.rerun()
+
+with col2:
+    if st.button("👁️ Nulstil sete huse", help="Fjern alle huse fra 'set' listen"):
+        try:
+            db = HousingDataDB()
+            db.conn.execute("DELETE FROM seen_houses")
+            db.conn.commit()
+            db.close()
+            st.success("Alle sete huse er fjernet!")
+            st.cache_data.clear()
+            st.rerun()
+        except Exception as e:
+            st.error(f"Fejl ved sletning: {e}")
 
 # Show data freshness
 try:
