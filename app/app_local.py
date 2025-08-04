@@ -53,6 +53,14 @@ if 'weights_changed' not in st.session_state:
 with st.expander("⚖️ **Vægtning af parametre**", expanded=False):
     # Profile selector at the top
     profile_names = scoring_engine.get_profile_names()
+    # Add 'Custom' to profile names if not already there
+    if 'Custom' not in profile_names:
+        profile_names.append('Custom')
+    
+    # Ensure selected profile exists in list
+    if st.session_state.selected_profile not in profile_names:
+        st.session_state.selected_profile = profile_names[0]
+        
     selected_profile = st.selectbox(
         "📋 Vælg profil:",
         profile_names,
@@ -71,16 +79,16 @@ with st.expander("⚖️ **Vægtning af parametre**", expanded=False):
     col1, col2 = st.columns(2)
     
     with col1:
-        energy_weight = st.slider("🔋 Energiklasse", 0, 100, st.session_state.current_weights['energy'], key="energy_slider")
-        train_weight = st.slider("🚆 Transport", 0, 100, st.session_state.current_weights['train_distance'], key="train_slider")
-        lot_weight = st.slider("🌳 Grundstørrelse", 0, 100, st.session_state.current_weights['lot_size'], key="lot_slider")
-        house_weight = st.slider("🏠 Husstørrelse", 0, 100, st.session_state.current_weights['house_size'], key="house_slider")
+        energy_weight = st.slider("🔋 Energiklasse", 0.0, 100.0, st.session_state.current_weights['score_energy'], step=0.1, format="%.1f", key="energy_slider")
+        train_weight = st.slider("🚆 Transport", 0.0, 100.0, st.session_state.current_weights['score_train_distance'], step=0.1, format="%.1f", key="train_slider")
+        lot_weight = st.slider("🌳 Grundstørrelse", 0.0, 100.0, st.session_state.current_weights['score_lot_size'], step=0.1, format="%.1f", key="lot_slider")
+        house_weight = st.slider("🏠 Husstørrelse", 0.0, 100.0, st.session_state.current_weights['score_house_size'], step=0.1, format="%.1f", key="house_slider")
     
     with col2:
-        price_weight = st.slider("💰 Priseffektivitet", 0, 100, st.session_state.current_weights['price_efficiency'], key="price_slider")
-        build_weight = st.slider("🏗️ Byggeår", 0, 100, st.session_state.current_weights['build_year'], key="build_slider")
-        basement_weight = st.slider("🏠 Kælderstørrelse", 0, 100, st.session_state.current_weights['basement'], key="basement_slider")
-        market_weight = st.slider("⏰ Dage på marked", 0, 100, st.session_state.current_weights['days_market'], key="market_slider")
+        price_weight = st.slider("💰 Priseffektivitet", 0.0, 100.0, st.session_state.current_weights['score_price_efficiency'], step=0.1, format="%.1f", key="price_slider")
+        build_weight = st.slider("🏗️ Byggeår", 0.0, 100.0, st.session_state.current_weights['score_build_year'], step=0.1, format="%.1f", key="build_slider")
+        basement_weight = st.slider("🏠 Kælderstørrelse", 0.0, 100.0, st.session_state.current_weights['score_basement'], step=0.1, format="%.1f", key="basement_slider")
+        market_weight = st.slider("⏰ Dage på marked", 0.0, 100.0, st.session_state.current_weights['score_days_market'], step=0.1, format="%.1f", key="market_slider")
 
     # Calculate total and check if changed
     current_total = energy_weight + train_weight + lot_weight + house_weight + price_weight + build_weight + basement_weight + market_weight
@@ -93,14 +101,14 @@ with st.expander("⚖️ **Vægtning af parametre**", expanded=False):
     
     # Check if weights have changed
     new_weights = {
-        'energy': energy_weight,
-        'train_distance': train_weight,
-        'lot_size': lot_weight,
-        'house_size': house_weight,
-        'price_efficiency': price_weight,
-        'build_year': build_weight,
-        'basement': basement_weight,
-        'days_market': market_weight
+        'score_energy': energy_weight,
+        'score_train_distance': train_weight,
+        'score_lot_size': lot_weight,
+        'score_house_size': house_weight,
+        'score_price_efficiency': price_weight,
+        'score_build_year': build_weight,
+        'score_basement': basement_weight,
+        'score_days_market': market_weight
     }
     
     weights_changed = new_weights != st.session_state.current_weights
@@ -207,7 +215,7 @@ if not filtered_listings.empty:
     st.markdown("### 🏆 **Topscorere**")
     
     # Calculate topscorers using the calculator
-    topscorers = topscorer_calculator.get_topscorers(filtered_listings)
+    topscorers = topscorer_calculator.calculate_topscorers(filtered_listings)
     
     if topscorers:
         # Display in a grid of 4 columns
