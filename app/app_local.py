@@ -142,7 +142,7 @@ min_score = st.sidebar.number_input("Minimum samlet score", min_value=0, max_val
 
 # New enhanced filters
 st.sidebar.subheader("🏗️ Boligdetaljer")
-min_build_year = st.sidebar.number_input("Minimum byggeår", min_value=1800, max_value=2025, value=1960)
+min_build_year = st.sidebar.number_input("Minimum byggeår", min_value=1800, max_value=2025)
 energy_classes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'UNKNOWN']
 selected_energy_classes = st.sidebar.multiselect("Energiklasser", energy_classes, default=[])
 
@@ -266,7 +266,7 @@ if not filtered_listings.empty:
         address = row['full_address']
         city = row['city']
         # Google search for property
-        search_query = f'"{address}" "{city}"'
+        search_query = f'{address} {city}'
         # URL encode the search query
         import urllib.parse
         encoded_query = urllib.parse.quote(search_query)
